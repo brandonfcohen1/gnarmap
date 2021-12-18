@@ -15,7 +15,6 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "react-leaflet-markercluster/dist/styles.min.css";
 import icon from "../assets/markerIcons/snowicon.png";
-import iconShadow from "leaflet/dist/images/marker-shadow.png";
 const esri = require("esri-leaflet");
 
 let DefaultIcon = L.icon({
@@ -179,7 +178,7 @@ export default function LeafletMap() {
                 data={snowdepth}
                 onEachFeature={(feature, layer) => {
                   const p = feature.properties;
-                  layer.bindPopup(stationPopup(p));
+                  layer.bindPopup("<b>Snow Depth</b><br>" + stationPopup(p));
                 }}
               />
             ) : null}
@@ -192,7 +191,7 @@ export default function LeafletMap() {
                 data={snowdensity}
                 onEachFeature={(feature, layer) => {
                   const p = feature.properties;
-                  layer.bindPopup(stationPopup(p));
+                  layer.bindPopup("<b>Snow Density</b><br>" + stationPopup(p));
                 }}
               />
             ) : null}
@@ -205,7 +204,9 @@ export default function LeafletMap() {
                 data={snowfall}
                 onEachFeature={(feature, layer) => {
                   const p = feature.properties;
-                  layer.bindPopup(stationPopup(p, true));
+                  layer.bindPopup(
+                    "<b>Snowfall</b><br>" + stationPopup(p, true)
+                  );
                 }}
               />
             ) : null}
