@@ -14,13 +14,13 @@ import MarkerClusterGroup from "react-leaflet-markercluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "react-leaflet-markercluster/dist/styles.min.css";
-import icon from "leaflet/dist/images/marker-icon.png";
+import icon from "../assets/markerIcons/snowicon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
 const esri = require("esri-leaflet");
 
 let DefaultIcon = L.icon({
   iconUrl: icon,
-  shadowUrl: iconShadow,
+  iconSize: [20, 20],
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
