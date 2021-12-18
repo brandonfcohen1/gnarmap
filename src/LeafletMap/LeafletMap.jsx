@@ -28,6 +28,30 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+const stationPopup = (p, sf = false) => {
+  try {
+    let popupString =
+      "<b>Name: </b>" +
+      p.name +
+      "<br><b>Elevation: </b>" +
+      p.elevation +
+      "<br><b>Report Time (UTC): </b>" +
+      p.report_time_utc +
+      "<br><b>Amount: </b>" +
+      p.amount +
+      " (" +
+      p.units +
+      ")";
+    if (sf) {
+      popupString +=
+        "<br><b>Duration: </b>" + p.duration + " (" + p.durationunits + ")";
+    }
+    return popupString;
+  } catch {
+    return null;
+  }
+};
+
 const latlngDisp = (ll) => {
   return (
     "(" +
@@ -100,12 +124,24 @@ export default function LeafletMap() {
         </LayersControl.Overlay>
         <LayersControl.Overlay name="Stations: Snow Depth">
           <MarkerClusterGroup>
-            <GeoJSON data={snowdepth} />
+            <GeoJSON
+              data={snowdepth}
+              onEachFeature={(feature, layer) => {
+                const p = feature.properties;
+                layer.bindPopup(stationPopup(p));
+              }}
+            />
           </MarkerClusterGroup>
         </LayersControl.Overlay>
         <LayersControl.Overlay name="Stations: Snow Density">
           <MarkerClusterGroup>
-            <GeoJSON data={snowdensity} />
+            <GeoJSON
+              data={snowdensity}
+              onEachFeature={(feature, layer) => {
+                const p = feature.properties;
+                layer.bindPopup(stationPopup(p));
+              }}
+            />
           </MarkerClusterGroup>
         </LayersControl.Overlay>
         <LayersControl.Overlay name="Stations: Snowfall">
@@ -114,12 +150,7 @@ export default function LeafletMap() {
               data={snowfall}
               onEachFeature={(feature, layer) => {
                 const p = feature.properties;
-                layer.bindPopup(
-                  "<b>Name: </b>" +
-                    p.name +
-                    "<br><b>Elevation: </b>" +
-                    p.elevation
-                );
+                layer.bindPopup(stationPopup(p, true));
               }}
             />
           </MarkerClusterGroup>
@@ -129,11 +160,3 @@ export default function LeafletMap() {
     </MapContainer>
   );
 }
-
-// "name": row_[1],
-// "elevation": row_[4],
-// "report_time_utc": row_[6],
-// "amount": row_[7],
-// "units": row_[8],
-// "duration": row_[9],
-// "durationunits": row_[10],
