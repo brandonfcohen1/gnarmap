@@ -5,12 +5,28 @@ import {
   LayersControl,
   useMapEvents,
   Popup,
+  GeoJSON,
 } from "react-leaflet";
 import { DynamicMapLayer } from "react-esri-leaflet";
 import "./LeafletMap.css";
 import "leaflet/dist/leaflet.css";
-//import * as esri from "esri-leaflet";
+import snowdensity from "../assets/snowdensity.json";
+import snowdepth from "../assets/snowdepth.json";
+import snowfall from "../assets/snowfall.json";
+import MarkerClusterGroup from "react-leaflet-markercluster";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import "react-leaflet-markercluster/dist/styles.min.css";
+import icon from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
 const esri = require("esri-leaflet");
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 const latlngDisp = (ll) => {
   return (
@@ -82,8 +98,42 @@ export default function LeafletMap() {
             f="image"
           />
         </LayersControl.Overlay>
+        <LayersControl.Overlay name="Stations: Snow Depth">
+          <MarkerClusterGroup>
+            <GeoJSON data={snowdepth} />
+          </MarkerClusterGroup>
+        </LayersControl.Overlay>
+        <LayersControl.Overlay name="Stations: Snow Density">
+          <MarkerClusterGroup>
+            <GeoJSON data={snowdensity} />
+          </MarkerClusterGroup>
+        </LayersControl.Overlay>
+        <LayersControl.Overlay name="Stations: Snowfall">
+          <MarkerClusterGroup>
+            <GeoJSON
+              data={snowfall}
+              onEachFeature={(feature, layer) => {
+                const p = feature.properties;
+                layer.bindPopup(
+                  "<b>Name: </b>" +
+                    p.name +
+                    "<br><b>Elevation: </b>" +
+                    p.elevation
+                );
+              }}
+            />
+          </MarkerClusterGroup>
+        </LayersControl.Overlay>
       </LayersControl>
       <HandleClick />
     </MapContainer>
   );
 }
+
+// "name": row_[1],
+// "elevation": row_[4],
+// "report_time_utc": row_[6],
+// "amount": row_[7],
+// "units": row_[8],
+// "duration": row_[9],
+// "durationunits": row_[10],
