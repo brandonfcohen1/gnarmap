@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -10,9 +10,9 @@ import {
 import { DynamicMapLayer, TiledMapLayer } from "react-esri-leaflet";
 import "./LeafletMap.css";
 import "leaflet/dist/leaflet.css";
-import snowdensity from "../assets/snowdensity.json";
-import snowdepth from "../assets/snowdepth.json";
-import snowfall from "../assets/snowfall.json";
+// import snowdensity from "../assets/snowdensity.json";
+// import snowdepth from "../assets/snowdepth.json";
+// import snowfall from "../assets/snowfall.json";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -27,6 +27,15 @@ let DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+const mapboxURL = (id) => {
+  return (
+    "https://api.mapbox.com/styles/v1/graphsnow/" +
+    id +
+    "/tiles/{z}/{x}/{y}{r}?access_token=" +
+    process.env.REACT_APP_MAPBOX
+  );
+};
 
 const stationPopup = (p, sf = false) => {
   try {
@@ -106,10 +115,48 @@ const HandleClick = () => {
 };
 
 export default function LeafletMap() {
+  const [snowdepth, setSnowdepth] = useState(null);
+  const [snowdensity, setSnowdensity] = useState(null);
+  const [snowfall, setSnowfall] = useState(null);
+
+  useEffect(() => {
+    fetch(
+      "https://graphsnowgeojson.s3.us-east-2.amazonaws.com/snowdensity.json"
+    )
+      .then((res) => {
+        return res.json();
+      })
+      .then((js) => {
+        setSnowdensity(js);
+      });
+    fetch("https://graphsnowgeojson.s3.us-east-2.amazonaws.com/snowfall.json")
+      .then((res) => {
+        return res.json();
+      })
+      .then((js) => {
+        setSnowfall(js);
+      });
+    fetch("https://graphsnowgeojson.s3.us-east-2.amazonaws.com/snowdepth.json")
+      .then((res) => {
+        return res.json();
+      })
+      .then((js) => {
+        setSnowdepth(js);
+      });
+  }, []);
+
   return (
     <MapContainer center={[44, -75]} zoom={7}>
       <LayersControl position="topright">
-        <LayersControl.BaseLayer checked name="OpenStreetMap">
+        <LayersControl.BaseLayer checked name="Topo">
+          <TileLayer
+            attribution='Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>'
+            url={mapboxURL("ckxby1vbx4rsd14mt3dooh55v")}
+            tileSize={512}
+            zoomOffset={-1}
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="OpenStreetMap">
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -130,35 +177,41 @@ export default function LeafletMap() {
         </LayersControl.Overlay>
         <LayersControl.Overlay name="Stations: Snow Depth">
           <MarkerClusterGroup>
-            <GeoJSON
-              data={snowdepth}
-              onEachFeature={(feature, layer) => {
-                const p = feature.properties;
-                layer.bindPopup(stationPopup(p));
-              }}
-            />
+            {snowdepth ? (
+              <GeoJSON
+                data={snowdepth}
+                onEachFeature={(feature, layer) => {
+                  const p = feature.properties;
+                  layer.bindPopup(stationPopup(p));
+                }}
+              />
+            ) : null}
           </MarkerClusterGroup>
         </LayersControl.Overlay>
         <LayersControl.Overlay name="Stations: Snow Density">
           <MarkerClusterGroup>
-            <GeoJSON
-              data={snowdensity}
-              onEachFeature={(feature, layer) => {
-                const p = feature.properties;
-                layer.bindPopup(stationPopup(p));
-              }}
-            />
+            {snowdensity ? (
+              <GeoJSON
+                data={snowdensity}
+                onEachFeature={(feature, layer) => {
+                  const p = feature.properties;
+                  layer.bindPopup(stationPopup(p));
+                }}
+              />
+            ) : null}
           </MarkerClusterGroup>
         </LayersControl.Overlay>
         <LayersControl.Overlay name="Stations: Snowfall">
           <MarkerClusterGroup>
-            <GeoJSON
-              data={snowfall}
-              onEachFeature={(feature, layer) => {
-                const p = feature.properties;
-                layer.bindPopup(stationPopup(p, true));
-              }}
-            />
+            {snowfall ? (
+              <GeoJSON
+                data={snowfall}
+                onEachFeature={(feature, layer) => {
+                  const p = feature.properties;
+                  layer.bindPopup(stationPopup(p, true));
+                }}
+              />
+            ) : null}
           </MarkerClusterGroup>
         </LayersControl.Overlay>
       </LayersControl>
