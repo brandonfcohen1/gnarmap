@@ -16,6 +16,7 @@ import "leaflet/dist/leaflet.css";
 import "react-leaflet-markercluster/dist/styles.min.css";
 import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
+import Legend from "../Legend/Legend";
 const esri = require("esri-leaflet");
 
 let DefaultIcon = L.icon({
@@ -213,6 +214,7 @@ export default function LeafletMap() {
         </LayersControl.Overlay>
       </LayersControl>
       <HandleClick />
+      <Legend />
     </MapContainer>
   );
 }
