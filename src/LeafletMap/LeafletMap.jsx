@@ -8,7 +8,7 @@ import {
 } from "react-leaflet";
 import { DynamicMapLayer } from "react-esri-leaflet";
 import "./LeafletMap.css";
-import 'leaflet/dist/leaflet.css';
+import "leaflet/dist/leaflet.css";
 //import * as esri from "esri-leaflet";
 const esri = require("esri-leaflet");
 
@@ -24,11 +24,11 @@ const latlngDisp = (ll) => {
 
 const HandleClick = () => {
   const [position, setPosition] = useState(null);
-  const [snowDepth, setSnowDepth] = useState("");
+  const [snowDepth, setSnowDepth] = useState("...");
   const map = useMapEvents({
     click(e) {
       setPosition(e.latlng);
-      setSnowDepth("");
+      setSnowDepth("...");
       esri
         .identifyFeatures({
           url: "https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer",
@@ -49,7 +49,7 @@ const HandleClick = () => {
             ) / 10,
             0
           );
-          setSnowDepth(_snowDepth);
+          setSnowDepth(_snowDepth + " in.");
         });
     },
   });
