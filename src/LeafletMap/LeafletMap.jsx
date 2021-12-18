@@ -7,7 +7,7 @@ import {
   Popup,
   GeoJSON,
 } from "react-leaflet";
-import { DynamicMapLayer } from "react-esri-leaflet";
+import { DynamicMapLayer, TiledMapLayer } from "react-esri-leaflet";
 import "./LeafletMap.css";
 import "leaflet/dist/leaflet.css";
 import snowdensity from "../assets/snowdensity.json";
@@ -109,11 +109,17 @@ export default function LeafletMap() {
   return (
     <MapContainer center={[44, -75]} zoom={7}>
       <LayersControl position="topright">
-        <LayersControl.BaseLayer checked name="OSM">
+        <LayersControl.BaseLayer checked name="OpenStreetMap">
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          <LayersControl.BaseLayer name="USGS Topo">
+            <TiledMapLayer url="https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer" />
+          </LayersControl.BaseLayer>
+          <LayersControl.BaseLayer name="USGS Imagery">
+            <TiledMapLayer url="https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer" />
+          </LayersControl.BaseLayer>
         </LayersControl.BaseLayer>
         <LayersControl.Overlay checked name="Snow Depth">
           <DynamicMapLayer
