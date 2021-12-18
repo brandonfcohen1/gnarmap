@@ -10,9 +10,6 @@ import {
 import { DynamicMapLayer, TiledMapLayer } from "react-esri-leaflet";
 import "./LeafletMap.css";
 import "leaflet/dist/leaflet.css";
-// import snowdensity from "../assets/snowdensity.json";
-// import snowdepth from "../assets/snowdepth.json";
-// import snowfall from "../assets/snowfall.json";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
