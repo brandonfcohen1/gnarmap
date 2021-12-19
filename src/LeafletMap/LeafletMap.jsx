@@ -144,80 +144,84 @@ export default function LeafletMap() {
   }, []);
 
   return (
-    <MapContainer center={[44, -75]} zoom={7}>
-      <LayersControl position="topright">
-        <LayersControl.BaseLayer checked name="Topo">
-          <TileLayer
-            attribution='Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>'
-            url={mapboxURL("ckxby1vbx4rsd14mt3dooh55v")}
-            tileSize={512}
-            zoomOffset={-1}
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer name="OpenStreetMap">
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <LayersControl.BaseLayer name="USGS Topo">
-            <TiledMapLayer url="https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer" />
+    <div className={"map-container-div"}>
+      <MapContainer center={[44, -75]} zoom={7}>
+        <LayersControl position="topright">
+          <LayersControl.BaseLayer checked name="Topo">
+            <TileLayer
+              attribution='Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>'
+              url={mapboxURL("ckxby1vbx4rsd14mt3dooh55v")}
+              tileSize={512}
+              zoomOffset={-1}
+            />
           </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="USGS Imagery">
-            <TiledMapLayer url="https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer" />
+          <LayersControl.BaseLayer name="OpenStreetMap">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <LayersControl.BaseLayer name="USGS Topo">
+              <TiledMapLayer url="https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer" />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="USGS Imagery">
+              <TiledMapLayer url="https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer" />
+            </LayersControl.BaseLayer>
           </LayersControl.BaseLayer>
-        </LayersControl.BaseLayer>
-        <LayersControl.Overlay checked name="Snow Depth">
-          <DynamicMapLayer
-            url="https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer"
-            opacity={0.5}
-            f="image"
-          />
-        </LayersControl.Overlay>
-        <LayersControl.Overlay name="Stations: Snow Depth">
-          <MarkerClusterGroup>
-            {snowdepth ? (
-              <GeoJSON
-                data={snowdepth}
-                onEachFeature={(feature, layer) => {
-                  const p = feature.properties;
-                  layer.bindPopup("<b>Snow Depth</b><br>" + stationPopup(p));
-                }}
-              />
-            ) : null}
-          </MarkerClusterGroup>
-        </LayersControl.Overlay>
-        <LayersControl.Overlay name="Stations: Snow Density">
-          <MarkerClusterGroup>
-            {snowdensity ? (
-              <GeoJSON
-                data={snowdensity}
-                onEachFeature={(feature, layer) => {
-                  const p = feature.properties;
-                  layer.bindPopup("<b>Snow Density</b><br>" + stationPopup(p));
-                }}
-              />
-            ) : null}
-          </MarkerClusterGroup>
-        </LayersControl.Overlay>
-        <LayersControl.Overlay name="Stations: Snowfall">
-          <MarkerClusterGroup>
-            {snowfall ? (
-              <GeoJSON
-                data={snowfall}
-                onEachFeature={(feature, layer) => {
-                  const p = feature.properties;
-                  layer.bindPopup(
-                    "<b>Snowfall</b><br>" + stationPopup(p, true)
-                  );
-                }}
-              />
-            ) : null}
-          </MarkerClusterGroup>
-        </LayersControl.Overlay>
-      </LayersControl>
-      <HandleClick />
-      <Legend />
-      <InfoButton />
-    </MapContainer>
+          <LayersControl.Overlay checked name="Snow Depth">
+            <DynamicMapLayer
+              url="https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer"
+              opacity={0.5}
+              f="image"
+            />
+          </LayersControl.Overlay>
+          <LayersControl.Overlay name="Stations: Snow Depth">
+            <MarkerClusterGroup>
+              {snowdepth ? (
+                <GeoJSON
+                  data={snowdepth}
+                  onEachFeature={(feature, layer) => {
+                    const p = feature.properties;
+                    layer.bindPopup("<b>Snow Depth</b><br>" + stationPopup(p));
+                  }}
+                />
+              ) : null}
+            </MarkerClusterGroup>
+          </LayersControl.Overlay>
+          <LayersControl.Overlay name="Stations: Snow Density">
+            <MarkerClusterGroup>
+              {snowdensity ? (
+                <GeoJSON
+                  data={snowdensity}
+                  onEachFeature={(feature, layer) => {
+                    const p = feature.properties;
+                    layer.bindPopup(
+                      "<b>Snow Density</b><br>" + stationPopup(p)
+                    );
+                  }}
+                />
+              ) : null}
+            </MarkerClusterGroup>
+          </LayersControl.Overlay>
+          <LayersControl.Overlay name="Stations: Snowfall">
+            <MarkerClusterGroup>
+              {snowfall ? (
+                <GeoJSON
+                  data={snowfall}
+                  onEachFeature={(feature, layer) => {
+                    const p = feature.properties;
+                    layer.bindPopup(
+                      "<b>Snowfall</b><br>" + stationPopup(p, true)
+                    );
+                  }}
+                />
+              ) : null}
+            </MarkerClusterGroup>
+          </LayersControl.Overlay>
+        </LayersControl>
+        <HandleClick />
+        <Legend />
+        <InfoButton />
+      </MapContainer>
+    </div>
   );
 }
