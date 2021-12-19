@@ -145,7 +145,7 @@ export default function LeafletMap() {
 
   return (
     <div className={"map-container-div"}>
-      <MapContainer center={[42.1, -96.7]} zoom={5}>
+      <MapContainer center={[42.1, -96.7]} zoom={5} tap={false}>
         <LayersControl position="topright">
           <LayersControl.BaseLayer checked name="Topo">
             <TileLayer
