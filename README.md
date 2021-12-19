@@ -1,7 +1,7 @@
-observation URL
-https://www.nohrsc.noaa.gov/nsa/discussions_text/National/snowfall/202111/snowfall_2021112906_e.txt
-https://www.nohrsc.noaa.gov/nsa/reports.html?region=National&var=snowfall&dy=2021&dm=11&dd=29&units=e&sort=value&filter=0
+# GraphSnow
 
-https://www.nohrsc.noaa.gov/nsa/discussions_text/National/
+This is a simple app to visualize the [NOHRSC](https://www.nohrsc.noaa.gov/nsa/) Snow Depth map and underlying site observations.
 
-https://github.com/mapbox/geojson-vt
+The Snow Depth raster data is from this [MapServer](https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer), which I visualize using [react-esri-leaflet](https://github.com/slutske22/react-esri-leaflet).
+
+The most accessible way I found the site observation data was through text files posted to the NOHRSC site every 6 hours, which I scrape and post to s3 every 6 hours using [this script](https://github.com/brandonfcohen1/graphsnow-utils).

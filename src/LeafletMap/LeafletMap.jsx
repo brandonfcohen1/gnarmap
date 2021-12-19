@@ -15,6 +15,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "react-leaflet-markercluster/dist/styles.min.css";
 import Legend from "../Legend/Legend";
+import InfoButton from "../InfoButton/InfoButton";
 import icon from "../assets/markerIcons/snowicon.png";
 const esri = require("esri-leaflet");
 
@@ -68,7 +69,7 @@ const latlngDisp = (ll) => {
   );
 };
 
-const HandleClick = () => {
+const HandleClick = (button) => {
   const [position, setPosition] = useState(null);
   const [snowDepth, setSnowDepth] = useState("...");
   const map = useMapEvents({
@@ -216,6 +217,7 @@ export default function LeafletMap() {
       </LayersControl>
       <HandleClick />
       <Legend />
+      <InfoButton />
     </MapContainer>
   );
 }

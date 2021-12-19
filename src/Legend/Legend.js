@@ -17,7 +17,6 @@ export default function Legend() {
       })
       .then((js) => {
         const imageLegend = Object.values(js)[0][2].legend;
-        console.log(imageLegend);
         let legend = new L.Control();
 
         legend.options.position = "bottomleft";

@@ -13,6 +13,7 @@
     "autoprefixer": "^9",
     "esri-leaflet": "^3.0.3",
     "leaflet": "^1.7.1",
+    "leaflet-easybutton": "^2.4.0",
     "leaflet.markercluster": "^1.5.3",
     "papaparse": "^5.3.1",
     "postcss": "^7",
