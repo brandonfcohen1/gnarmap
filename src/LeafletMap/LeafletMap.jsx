@@ -170,7 +170,7 @@ export default function LeafletMap() {
           <LayersControl.Overlay checked name="Snow Depth">
             <DynamicMapLayer
               url="https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer"
-              opacity={0.5}
+              opacity={0.7}
               f="image"
             />
           </LayersControl.Overlay>
