@@ -65,7 +65,7 @@ export default function InfoButton(props) {
                       as="h3"
                       className="text-lg leading-6 font-medium text-gray-900"
                     >
-                      Welcome to GraphSnow
+                      Welcome to GnarMap
                     </Dialog.Title>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
@@ -107,7 +107,7 @@ export default function InfoButton(props) {
                         <br />
                         This project is{" "}
                         <a
-                          href="https://github.com/brandonfcohen1/graphsnow"
+                          href="https://github.com/brandonfcohen1/gnarmap"
                           target="_blank"
                           rel="noreferrer noopener"
                           className={"modalLink"}
@@ -116,7 +116,7 @@ export default function InfoButton(props) {
                         </a>
                         . Feel free to check it out, contribute, or{" "}
                         <a
-                          href="mailto:brandon@graphsnow.com"
+                          href="mailto:brandon@gnarmap.com"
                           target="_blank"
                           rel="noreferrer noopener"
                           className={"modalLink"}
