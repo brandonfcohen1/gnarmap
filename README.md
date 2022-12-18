@@ -1,4 +1,4 @@
-# GraphSnow
+# GnarMap
 
 This is a simple app to visualize the [NOHRSC](https://www.nohrsc.noaa.gov/nsa/) Snow Depth map and underlying site observations.
 
