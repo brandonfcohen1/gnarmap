@@ -1,13 +1,12 @@
-//MyComponent.jsx
 import { useEffect, useState, Fragment } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { Dialog, Transition } from "@headlessui/react";
 import "./InfoButton.css";
-require("leaflet-easybutton");
-require("leaflet-easybutton/src/easy-button.css");
+import "leaflet-easybutton";
+import "leaflet-easybutton/src/easy-button.css";
 
-export default function InfoButton(props) {
+export default function InfoButton() {
   const map = useMap();
   const [open, setOpen] = useState(true);
 
@@ -41,13 +40,6 @@ export default function InfoButton(props) {
             <Dialog.Overlay className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
           </Transition.Child>
 
-          {/* This element is to trick the browser into centering the modal contents. */}
-          {/* <span
-            className="hidden sm:inline-block sm:align-middle sm:h-screen"
-            aria-hidden="true"
-          >
-            &#8203;
-          </span> */}
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
