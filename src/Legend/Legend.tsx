@@ -3,20 +3,40 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "./Legend.css";
 
+interface Legend {
+  label: string;
+  imageData: string;
+  url: string;
+  contentType: string;
+  height: number;
+  width: number;
+}
+
+interface LegendResponse {
+  layers: {
+    layerId: number;
+    layerName: string;
+    layerType: string;
+    minScale: number;
+    maxScale: number;
+    legend: Legend[];
+  }[];
+}
+
 const legendURL =
   "https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer/legend?f=json";
 
 export default function Legend() {
-  //const [imageLegend, setImageLegend] = useState(null);
   const map = useMap();
 
   useEffect(() => {
     fetch(legendURL)
-      .then((res) => {
+      .then((res: any) => {
         return res.json();
       })
-      .then((js) => {
-        const imageLegend = Object.values(js)[0][2].legend;
+      .then((js: LegendResponse) => {
+        const imageLegend: Legend[] =
+          js?.layers.find((layer) => layer?.layerId === 3)?.legend || [];
         let legend = new L.Control();
 
         legend.options.position = "bottomleft";

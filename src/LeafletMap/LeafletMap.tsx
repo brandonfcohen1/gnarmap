@@ -11,13 +11,14 @@ import { DynamicMapLayer, TiledMapLayer } from "react-esri-leaflet";
 import "./LeafletMap.css";
 import "leaflet/dist/leaflet.css";
 import MarkerClusterGroup from "react-leaflet-markercluster";
-import L from "leaflet";
+import L, { LatLng } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "react-leaflet-markercluster/dist/styles.min.css";
 import Legend from "../Legend/Legend";
 import InfoButton from "../InfoButton/InfoButton";
 import icon from "../assets/markerIcons/snowicon.png";
-const esri = require("esri-leaflet");
+import { GeoJsonProperties } from "geojson";
+import { identifyFeatures } from "esri-leaflet";
 
 let DefaultIcon = L.icon({
   iconUrl: icon,
@@ -26,7 +27,7 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const mapboxURL = (id) => {
+const mapboxURL = (id: string) => {
   return (
     "https://api.mapbox.com/styles/v1/graphsnow/" +
     id +
@@ -35,20 +36,10 @@ const mapboxURL = (id) => {
   );
 };
 
-const stationPopup = (p, sf = false) => {
+const stationPopup = (p: GeoJsonProperties, sf: boolean = false) => {
   try {
-    let popupString =
-      "<b>Name: </b>" +
-      p.name +
-      "<br><b>Elevation: </b>" +
-      p.elevation +
-      "<br><b>Report Time (UTC): </b>" +
-      p.report_time_utc +
-      "<br><b>Amount: </b>" +
-      p.amount +
-      " (" +
-      p.units +
-      ")";
+    if (!p) return null;
+    let popupString = `<b>Name: </b>${p.name}<br><b>Elevation: </b>${p.elevation}<br><b>Report Time (UTC): </b>${p.report_time_utc}<br><b>Amount: </b>${p.amount} (${p.units})`;
     if (sf) {
       popupString +=
         "<br><b>Duration: </b>" + p.duration + " (" + p.durationunits + ")";
@@ -59,7 +50,7 @@ const stationPopup = (p, sf = false) => {
   }
 };
 
-const latlngDisp = (ll) => {
+const latlngDisp = (ll: LatLng) => {
   return (
     "(" +
     Math.round(100 * ll.lat) / 100 +
@@ -69,39 +60,38 @@ const latlngDisp = (ll) => {
   );
 };
 
-const HandleClick = (button) => {
-  const [position, setPosition] = useState(null);
+const HandleClick = () => {
+  const [position, setPosition] = useState<LatLng>();
   const [snowDepth, setSnowDepth] = useState("...");
   const map = useMapEvents({
     click(e) {
       setPosition(e.latlng);
       setSnowDepth("...");
-      esri
-        .identifyFeatures({
-          url: "https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer",
-        })
+      identifyFeatures({
+        url: "https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer",
+      })
         .layers("all:3,7")
         .on(map)
         .at(e.latlng)
-        .run(function (error, featureCollection) {
+        .run((error: any, featureCollection: any) => {
           if (error) {
             console.log(error);
             return;
           }
-          const _snowDepth = Math.max(
-            Math.round(
-              10 *
-                featureCollection.features.filter((p) => p.layerId === 3)[0]
-                  .properties["Pixel Value"]
-            ) / 10,
-            0
-          );
+          const pixelValue: number = featureCollection.features.filter(
+            (p: GeoJsonProperties) => p?.layerId === 3
+          )[0]?.properties["Pixel Value"];
+          if (!pixelValue) {
+            setSnowDepth("No Data");
+            return;
+          }
+          const _snowDepth = Math.max(Math.round(10 * pixelValue) / 10, 0);
           setSnowDepth(_snowDepth + " in.");
         });
     },
   });
 
-  return position === null ? null : (
+  return position ? (
     <Popup position={position}>
       <b>{"Snow Depth: "}</b>
       {snowDepth}
@@ -109,7 +99,7 @@ const HandleClick = (button) => {
       <b>{"Location: "}</b>
       {latlngDisp(position)}
     </Popup>
-  );
+  ) : null;
 };
 
 export default function LeafletMap() {
