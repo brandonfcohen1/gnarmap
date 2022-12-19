@@ -23,7 +23,7 @@
     "react-leaflet": ">=3.1.0 <3.2.0 || ^3.2.1",
     "react-leaflet-markercluster": "^3.0.0-rc1",
     "react-scripts": "4.0.3",
-    "tailwindcss": "npm:@tailwindcss/postcss7-compat",
+    "tailwindcss": "^3.2.4",
     "ts-node": "^10.9.1",
     "web-vitals": "^1.0.1"
   },
