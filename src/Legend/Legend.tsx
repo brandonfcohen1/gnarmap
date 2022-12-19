@@ -3,7 +3,7 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "./Legend.css";
 
-interface Legend {
+interface LegendObj {
   label: string;
   imageData: string;
   url: string;
@@ -19,7 +19,7 @@ interface LegendResponse {
     layerType: string;
     minScale: number;
     maxScale: number;
-    legend: Legend[];
+    legend: LegendObj[];
   }[];
 }
 
@@ -35,7 +35,7 @@ export default function Legend() {
         return res.json();
       })
       .then((js: LegendResponse) => {
-        const imageLegend: Legend[] =
+        const imageLegend: LegendObj[] =
           js?.layers.find((layer) => layer?.layerId === 3)?.legend || [];
         let legend = new L.Control();
 
