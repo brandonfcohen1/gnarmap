@@ -24,7 +24,7 @@ interface LegendResponse {
 }
 
 const legendURL =
-  "https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer/legend?f=json";
+  "https://mapservices.weather.noaa.gov/raster/rest/services/snow/NOHRSC_Snow_Analysis/MapServer/legend?f=json";
 
 export default function Legend() {
   const map = useMap();
