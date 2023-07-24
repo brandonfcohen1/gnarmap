@@ -68,7 +68,7 @@ const HandleClick = () => {
       setPosition(e.latlng);
       setSnowDepth("...");
       identifyFeatures({
-        url: "https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer",
+        url: "https://mapservices.weather.noaa.gov/raster/rest/services/snow/NOHRSC_Snow_Analysis/MapServer",
       })
         .layers("all:3,7")
         .on(map)
@@ -159,9 +159,10 @@ export default function LeafletMap() {
           </LayersControl.BaseLayer>
           <LayersControl.Overlay checked name="Snow Depth">
             <DynamicMapLayer
-              url="https://idpgis.ncep.noaa.gov/arcgis/rest/services/NWS_Observations/NOHRSC_Snow_Analysis/MapServer"
+              url="https://mapservices.weather.noaa.gov/raster/rest/services/snow/NOHRSC_Snow_Analysis/MapServer"
               opacity={0.7}
               f="image"
+              layers={[3]}
             />
           </LayersControl.Overlay>
           <LayersControl.Overlay name="Stations: Snow Depth">
