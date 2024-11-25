@@ -80,7 +80,7 @@ const HandleClick = () => {
           }
           const pixelValue: number = featureCollection.features.filter(
             (p: GeoJsonProperties) => p?.layerId === 3
-          )[0]?.properties["Pixel Value"];
+          )[0]?.properties["Service Pixel Value"];
           if (!pixelValue) {
             setSnowDepth("No Data");
             return;
