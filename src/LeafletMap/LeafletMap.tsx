@@ -85,8 +85,8 @@ const HandleClick = () => {
             setSnowDepth("No Data");
             return;
           }
-          const _snowDepth = Math.max(Math.round(10 * pixelValue) / 10, 0);
-          setSnowDepth(_snowDepth + " in.");
+          const snowDepth = Math.max(pixelValue / 0.0254, 0).toFixed(1);
+          setSnowDepth(`${snowDepth} in.`);
         });
     },
   });
