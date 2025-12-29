@@ -22,7 +22,7 @@ export default function LayerControls({ layers, setLayers }: LayerControlsProps)
   };
 
   return (
-    <div className="absolute top-4 right-14 z-10 bg-white rounded-md shadow-md">
+    <div className="absolute top-4 right-[10px] z-10 bg-white rounded-md shadow-md">
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="w-full px-3 py-2 text-sm font-semibold text-left flex justify-between items-center gap-2"

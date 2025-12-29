@@ -64,7 +64,7 @@ export default function DatePicker({ selectedDate, onDateChange, enabled = true,
     if (!enabled || hasFetched) return;
 
     setHasFetched(true);
-    fetch("/api/dates")
+    fetch("/api/dates", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         const dateSet = new Set<string>(data.dates || []);

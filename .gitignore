@@ -32,3 +32,13 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.rlib
+
+# pipeline local data
+packages/pipeline/output/
+packages/pipeline/zarr-output/

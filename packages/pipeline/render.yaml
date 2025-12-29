@@ -1,0 +1,20 @@
+services:
+  - type: cron
+    name: snodas-daily
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    schedule: "0 14 * * *"  # 2 PM UTC = ~6-9 AM US time zones
+    envVars:
+      - key: RUST_LOG
+        value: info
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_PREFIX
+        value: snodas
+    dockerCommand: daily --date yesterday --products 1034,1036 --output s3://${S3_BUCKET}/${S3_PREFIX}

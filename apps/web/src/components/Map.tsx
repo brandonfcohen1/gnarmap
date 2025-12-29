@@ -1,21 +1,22 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import MapGL, {
   Source,
   Layer,
   Popup,
   NavigationControl,
   MapLayerMouseEvent,
+  MapRef,
 } from "react-map-gl/maplibre";
 import type { LayerProps } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import Supercluster from "supercluster";
 import Legend from "./Legend";
 import InfoModal from "./InfoModal";
 import LayerControls from "./LayerControls";
 import DatePicker from "./DatePicker";
-
+import BasemapControl from "./BasemapControl";
+import SnowChart from "./SnowChart";
 
 interface StationFeature {
   type: "Feature";
@@ -36,19 +37,6 @@ interface StationData {
   features: StationFeature[];
 }
 
-interface ClusterProperties {
-  cluster: boolean;
-  cluster_id: number;
-  point_count: number;
-  point_count_abbreviated: number;
-}
-
-type ClusterFeature = {
-  type: "Feature";
-  geometry: { type: "Point"; coordinates: [number, number] };
-  properties: ClusterProperties | StationFeature["properties"];
-};
-
 interface ClickPopupData {
   lng: number;
   lat: number;
@@ -68,47 +56,44 @@ interface StationPopupData {
   dataType: string;
 }
 
-const clusterLayer: LayerProps = {
-  id: "clusters",
+const clusterLayer = (id: string, color: string): LayerProps => ({
+  id,
   type: "circle",
   filter: ["has", "point_count"],
   paint: {
-    "circle-color": [
-      "step",
-      ["get", "point_count"],
-      "#51bbd6",
-      10,
-      "#f1f075",
-      50,
-      "#f28cb1",
-    ],
-    "circle-radius": ["step", ["get", "point_count"], 15, 10, 20, 50, 25],
+    "circle-color": color,
+    "circle-radius": ["step", ["get", "point_count"], 18, 10, 24, 50, 32],
+    "circle-stroke-width": 2,
+    "circle-stroke-color": "#fff",
   },
-};
+});
 
-const clusterCountLayer: LayerProps = {
-  id: "cluster-count",
+const clusterCountLayer = (id: string): LayerProps => ({
+  id,
   type: "symbol",
   filter: ["has", "point_count"],
   layout: {
     "text-field": "{point_count_abbreviated}",
     "text-size": 12,
   },
-};
-
-const createUnclusteredPointLayer = (id: string, color: string): LayerProps => ({
-  id,
-  type: "circle",
-  filter: ["!", ["has", "point_count"]],
   paint: {
-    "circle-color": color,
-    "circle-radius": 6,
-    "circle-stroke-width": 1,
-    "circle-stroke-color": "#fff",
+    "text-color": "#fff",
+  },
+});
+
+const unclusteredPointLayer = (id: string): LayerProps => ({
+  id,
+  type: "symbol",
+  filter: ["!", ["has", "point_count"]],
+  layout: {
+    "icon-image": "snowflake",
+    "icon-size": 0.04,
+    "icon-allow-overlap": true,
   },
 });
 
 export default function Map() {
+  const mapRef = useRef<MapRef>(null);
   const [viewState, setViewState] = useState({
     longitude: -96.7,
     latitude: 42.1,
@@ -124,6 +109,10 @@ export default function Map() {
   const [infoOpen, setInfoOpen] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [cursor, setCursor] = useState("crosshair");
+  const [basemap, setBasemap] = useState("positron");
+  const [chartLocation, setChartLocation] = useState<{ lng: number; lat: number } | null>(null);
 
   const [layers, setLayers] = useState({
     snowDepthRaster: true,
@@ -134,87 +123,77 @@ export default function Map() {
 
   useEffect(() => {
     if (!isReady) return;
-    fetch("https://graphsnowgeojson.s3.us-east-2.amazonaws.com/snowdepth.json")
+    fetch("/api/stations/snowdepth")
       .then((res) => res.json())
       .then(setSnowDepthData);
-    fetch("https://graphsnowgeojson.s3.us-east-2.amazonaws.com/snowdensity.json")
+    fetch("/api/stations/snowdensity")
       .then((res) => res.json())
       .then(setSnowDensityData);
-    fetch("https://graphsnowgeojson.s3.us-east-2.amazonaws.com/snowfall.json")
+    fetch("/api/stations/snowfall")
       .then((res) => res.json())
       .then(setSnowfallData);
   }, [isReady]);
 
-  const superclusterDepth = useMemo(() => {
-    if (!snowDepthData) return null;
-    const index = new Supercluster({ radius: 40, maxZoom: 16 });
-    index.load(snowDepthData.features);
-    return index;
-  }, [snowDepthData]);
+  const handleMapLoad = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
 
-  const superclusterDensity = useMemo(() => {
-    if (!snowDensityData) return null;
-    const index = new Supercluster({ radius: 40, maxZoom: 16 });
-    index.load(snowDensityData.features);
-    return index;
-  }, [snowDensityData]);
-
-  const superclusterSnowfall = useMemo(() => {
-    if (!snowfallData) return null;
-    const index = new Supercluster({ radius: 40, maxZoom: 16 });
-    index.load(snowfallData.features);
-    return index;
-  }, [snowfallData]);
-
-  const getBounds = useCallback((): [number, number, number, number] => {
-    const latRange = 180 / Math.pow(2, viewState.zoom);
-    const lngRange = 360 / Math.pow(2, viewState.zoom);
-    return [
-      viewState.longitude - lngRange,
-      viewState.latitude - latRange,
-      viewState.longitude + lngRange,
-      viewState.latitude + latRange,
-    ];
-  }, [viewState]);
-
-  const depthClusters = useMemo(() => {
-    if (!superclusterDepth) return [];
-    return superclusterDepth.getClusters(getBounds(), Math.floor(viewState.zoom)) as ClusterFeature[];
-  }, [superclusterDepth, getBounds, viewState.zoom]);
-
-  const densityClusters = useMemo(() => {
-    if (!superclusterDensity) return [];
-    return superclusterDensity.getClusters(getBounds(), Math.floor(viewState.zoom)) as ClusterFeature[];
-  }, [superclusterDensity, getBounds, viewState.zoom]);
-
-  const snowfallClusters = useMemo(() => {
-    if (!superclusterSnowfall) return [];
-    return superclusterSnowfall.getClusters(getBounds(), Math.floor(viewState.zoom)) as ClusterFeature[];
-  }, [superclusterSnowfall, getBounds, viewState.zoom]);
+    const img = new Image();
+    img.onload = () => {
+      if (!map.hasImage("snowflake")) {
+        map.addImage("snowflake", img);
+      }
+      setMapLoaded(true);
+    };
+    img.src = "/snowicon.png";
+  }, []);
 
   const handleMapClick = useCallback(async (e: MapLayerMouseEvent) => {
+    const map = mapRef.current?.getMap();
     const features = e.features;
+
     if (features && features.length > 0) {
       const feature = features[0];
-      if (feature.properties && "cluster" in feature.properties) {
+
+      if (feature.properties && feature.properties.cluster) {
+        const sourceId = feature.source;
+        if (map && sourceId) {
+          const source = map.getSource(sourceId);
+          if (source && source.type === "geojson") {
+            const clusterId = feature.properties.cluster_id as number;
+            const coords = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
+
+            try {
+              const zoom = await (source as maplibregl.GeoJSONSource).getClusterExpansionZoom(clusterId);
+              map.easeTo({
+                center: coords,
+                zoom: Math.min(zoom, 14),
+                duration: 500,
+              });
+            } catch {
+              // ignore
+            }
+          }
+        }
         return;
       }
+
       if (feature.properties && "name" in feature.properties) {
-        const coords = (feature.geometry as { type: "Point"; coordinates: [number, number] }).coordinates;
-        const props = feature.properties as StationFeature["properties"];
+        const coords = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
+        const props = feature.properties;
         let dataType = "Snow Depth";
         if (feature.layer?.id?.includes("density")) dataType = "Snow Density";
         if (feature.layer?.id?.includes("snowfall")) dataType = "Snowfall";
         setStationPopup({
           lng: coords[0],
           lat: coords[1],
-          name: props.name,
-          elevation: props.elevation,
-          reportTime: props.report_time_utc,
-          amount: props.amount,
-          units: props.units,
-          duration: props.duration,
-          durationUnits: props.durationunits,
+          name: props.name as string,
+          elevation: props.elevation as string,
+          reportTime: props.report_time_utc as string,
+          amount: props.amount as string,
+          units: props.units as string,
+          duration: props.duration as string | undefined,
+          durationUnits: props.durationunits as string | undefined,
           dataType,
         });
         setClickPopup(null);
@@ -250,25 +229,39 @@ export default function Map() {
     ? `/api/tiles/${selectedDate}/{z}/{x}/{y}.png`
     : null;
 
+  const interactiveLayerIds = [
+    ...(layers.stationsSnowDepth ? ["clusters-depth", "unclustered-depth"] : []),
+    ...(layers.stationsSnowDensity ? ["clusters-density", "unclustered-density"] : []),
+    ...(layers.stationsSnowfall ? ["clusters-snowfall", "unclustered-snowfall"] : []),
+  ];
+
   return (
     <div className="relative h-full w-full">
       <MapGL
+        ref={mapRef}
         {...viewState}
         onMove={(evt) => setViewState(evt.viewState)}
+        onLoad={handleMapLoad}
+        onMouseEnter={() => setCursor("pointer")}
+        onMouseLeave={() => setCursor("crosshair")}
         style={{ width: "100%", height: "100%" }}
-        mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        mapStyle={{
+          positron: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+          dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+          voyager: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+          osm: "https://tiles.openfreemap.org/styles/liberty",
+        }[basemap]}
         onClick={handleMapClick}
-        interactiveLayerIds={[
-          ...(layers.stationsSnowDepth ? ["unclustered-point-depth"] : []),
-          ...(layers.stationsSnowDensity ? ["unclustered-point-density"] : []),
-          ...(layers.stationsSnowfall ? ["unclustered-point-snowfall"] : []),
-        ]}
+        interactiveLayerIds={interactiveLayerIds}
+        cursor={cursor}
+        dragRotate={false}
+        touchZoomRotate={false}
       >
-        <NavigationControl position="top-right" />
+        <NavigationControl position="top-right" style={{ marginTop: "260px" }} />
 
         {layers.snowDepthRaster && rasterTileUrl && (
           <Source
-            id="snow-depth"
+            id="snow-depth-raster"
             type="raster"
             tiles={[rasterTileUrl]}
             tileSize={256}
@@ -281,42 +274,48 @@ export default function Map() {
           </Source>
         )}
 
-        {layers.stationsSnowDepth && depthClusters.length > 0 && (
+        {mapLoaded && layers.stationsSnowDepth && snowDepthData && (
           <Source
             id="stations-depth"
             type="geojson"
-            data={{ type: "FeatureCollection", features: depthClusters }}
-            cluster={false}
+            data={snowDepthData}
+            cluster={true}
+            clusterMaxZoom={14}
+            clusterRadius={50}
           >
-            <Layer {...clusterLayer} id="clusters-depth" />
-            <Layer {...clusterCountLayer} id="cluster-count-depth" />
-            <Layer {...createUnclusteredPointLayer("unclustered-point-depth", "#3b82f6")} />
+            <Layer {...clusterLayer("clusters-depth", "#2563eb")} />
+            <Layer {...clusterCountLayer("cluster-count-depth")} />
+            <Layer {...unclusteredPointLayer("unclustered-depth")} />
           </Source>
         )}
 
-        {layers.stationsSnowDensity && densityClusters.length > 0 && (
+        {mapLoaded && layers.stationsSnowDensity && snowDensityData && (
           <Source
             id="stations-density"
             type="geojson"
-            data={{ type: "FeatureCollection", features: densityClusters }}
-            cluster={false}
+            data={snowDensityData}
+            cluster={true}
+            clusterMaxZoom={14}
+            clusterRadius={50}
           >
-            <Layer {...clusterLayer} id="clusters-density" />
-            <Layer {...clusterCountLayer} id="cluster-count-density" />
-            <Layer {...createUnclusteredPointLayer("unclustered-point-density", "#8b5cf6")} />
+            <Layer {...clusterLayer("clusters-density", "#7c3aed")} />
+            <Layer {...clusterCountLayer("cluster-count-density")} />
+            <Layer {...unclusteredPointLayer("unclustered-density")} />
           </Source>
         )}
 
-        {layers.stationsSnowfall && snowfallClusters.length > 0 && (
+        {mapLoaded && layers.stationsSnowfall && snowfallData && (
           <Source
             id="stations-snowfall"
             type="geojson"
-            data={{ type: "FeatureCollection", features: snowfallClusters }}
-            cluster={false}
+            data={snowfallData}
+            cluster={true}
+            clusterMaxZoom={14}
+            clusterRadius={50}
           >
-            <Layer {...clusterLayer} id="clusters-snowfall" />
-            <Layer {...clusterCountLayer} id="cluster-count-snowfall" />
-            <Layer {...createUnclusteredPointLayer("unclustered-point-snowfall", "#06b6d4")} />
+            <Layer {...clusterLayer("clusters-snowfall", "#0891b2")} />
+            <Layer {...clusterCountLayer("cluster-count-snowfall")} />
+            <Layer {...unclusteredPointLayer("unclustered-snowfall")} />
           </Source>
         )}
 
@@ -329,13 +328,17 @@ export default function Map() {
             closeOnClick={false}
           >
             <div className="text-sm">
-              <p>
-                <strong>Snow Depth:</strong> {clickPopup.snowDepth}
-              </p>
-              <p>
-                <strong>Location:</strong> ({clickPopup.lat.toFixed(2)},{" "}
-                {clickPopup.lng.toFixed(2)})
-              </p>
+              <p><strong>Snow Depth:</strong> {clickPopup.snowDepth}</p>
+              <p><strong>Location:</strong> ({clickPopup.lat.toFixed(2)}, {clickPopup.lng.toFixed(2)})</p>
+              <button
+                onClick={() => {
+                  setChartLocation({ lng: clickPopup.lng, lat: clickPopup.lat });
+                  setClickPopup(null);
+                }}
+                className="mt-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+              >
+                View History
+              </button>
             </div>
           </Popup>
         )}
@@ -350,23 +353,12 @@ export default function Map() {
           >
             <div className="text-sm">
               <p className="font-bold">{stationPopup.dataType}</p>
-              <p>
-                <strong>Name:</strong> {stationPopup.name}
-              </p>
-              <p>
-                <strong>Elevation:</strong> {stationPopup.elevation}
-              </p>
-              <p>
-                <strong>Report Time (UTC):</strong> {stationPopup.reportTime}
-              </p>
-              <p>
-                <strong>Amount:</strong> {stationPopup.amount} ({stationPopup.units})
-              </p>
+              <p><strong>Name:</strong> {stationPopup.name}</p>
+              <p><strong>Elevation:</strong> {stationPopup.elevation}</p>
+              <p><strong>Report Time (UTC):</strong> {stationPopup.reportTime}</p>
+              <p><strong>Amount:</strong> {stationPopup.amount} ({stationPopup.units})</p>
               {stationPopup.duration && (
-                <p>
-                  <strong>Duration:</strong> {stationPopup.duration} (
-                  {stationPopup.durationUnits})
-                </p>
+                <p><strong>Duration:</strong> {stationPopup.duration} ({stationPopup.durationUnits})</p>
               )}
             </div>
           </Popup>
@@ -375,6 +367,7 @@ export default function Map() {
 
       {isReady && <Legend />}
       {isReady && <LayerControls layers={layers} setLayers={setLayers} />}
+      {isReady && <BasemapControl basemap={basemap} setBasemap={setBasemap} />}
       <DatePicker
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
@@ -404,6 +397,13 @@ export default function Map() {
         </button>
       )}
       <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
+      {chartLocation && (
+        <SnowChart
+          lng={chartLocation.lng}
+          lat={chartLocation.lat}
+          onClose={() => setChartLocation(null)}
+        />
+      )}
     </div>
   );
 }

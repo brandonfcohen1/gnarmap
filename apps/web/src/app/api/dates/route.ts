@@ -14,7 +14,7 @@ const PREFIX = "snodas/";
 
 let cachedDates: string[] | null = null;
 let cacheExpiry = 0;
-const CACHE_TTL = 60 * 60 * 1000;
+const CACHE_TTL = 5 * 60 * 1000;
 
 async function fetchDates(): Promise<string[]> {
   const now = Date.now();
@@ -51,11 +51,7 @@ async function fetchDates(): Promise<string[]> {
 export async function GET() {
   try {
     const dates = await fetchDates();
-    return NextResponse.json({ dates }, {
-      headers: {
-        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
-      },
-    });
+    return NextResponse.json({ dates });
   } catch (error) {
     console.error("Error listing S3 objects:", error);
     return NextResponse.json({ error: "Failed to list dates" }, { status: 500 });
