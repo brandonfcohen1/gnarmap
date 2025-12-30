@@ -158,7 +158,11 @@ export default function Map() {
     map.on("idle", () => {
       setTimeout(() => {
         setRasterLoading(false);
-        setInitialLoadComplete(true);
+        if (map.getSource("snow-depth-raster")) {
+          setInitialLoadComplete(true);
+          const globalLoader = document.getElementById("global-loader");
+          if (globalLoader) globalLoader.remove();
+        }
       }, 0);
     });
   }, []);
@@ -255,7 +259,10 @@ export default function Map() {
       <MapGL
         ref={mapRef}
         {...viewState}
-        onMove={(evt) => setViewState(evt.viewState)}
+        onMove={(evt) => {
+          setViewState(evt.viewState);
+          console.log("zoom:", evt.viewState.zoom.toFixed(2));
+        }}
         onLoad={handleMapLoad}
         onMouseEnter={() => setCursor("pointer")}
         onMouseLeave={() => setCursor("crosshair")}
@@ -280,6 +287,7 @@ export default function Map() {
             type="raster"
             tiles={[rasterTileUrl]}
             tileSize={256}
+            minzoom={3.5}
           >
             <Layer
               id="snow-depth-layer"
@@ -412,15 +420,7 @@ export default function Map() {
         </button>
       )}
       <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
-      {(rasterLoading || !initialLoadComplete) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-20 pointer-events-none">
-          <div className="bg-white rounded-lg px-4 py-3 shadow-lg flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-medium text-gray-700">Loading snow data...</span>
-          </div>
-        </div>
-      )}
-      {chartLocation && (
+            {chartLocation && (
         <SnowChart
           lng={chartLocation.lng}
           lat={chartLocation.lat}
