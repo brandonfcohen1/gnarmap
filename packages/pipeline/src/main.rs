@@ -18,7 +18,7 @@ use convert::BatchConverter;
 use download::{generate_date_range, Downloader};
 use extract::extract_tar;
 use snodas::parse_product_ids;
-use storage::{OutputDestination, S3Uploader};
+use storage::{OutputDestination, R2Uploader};
 use timeseries::TimeSeriesExtractor;
 use zarr_builder::ZarrBuilder;
 
@@ -171,7 +171,7 @@ async fn run_backfill(
     let destination = OutputDestination::from_str(output)?;
     let local_output = match &destination {
         OutputDestination::Local(path) => path.clone(),
-        OutputDestination::S3 { .. } => PathBuf::from("./temp_output"),
+        OutputDestination::R2 { .. } => PathBuf::from("./temp_output"),
     };
 
     std::fs::create_dir_all(&local_output).context("Failed to create output directory")?;
@@ -179,9 +179,9 @@ async fn run_backfill(
     let downloader = Downloader::new(concurrency)?;
     let batch_converter = BatchConverter::new(&local_output);
 
-    let s3_uploader = match &destination {
-        OutputDestination::S3 { bucket, prefix } => {
-            Some(S3Uploader::new(bucket.clone(), prefix.clone()).await?)
+    let r2_uploader = match &destination {
+        OutputDestination::R2 { bucket, prefix } => {
+            Some(R2Uploader::new(bucket.clone(), prefix.clone()).await?)
         }
         OutputDestination::Local(_) => None,
     };
@@ -199,7 +199,7 @@ async fn run_backfill(
                             } else {
                                 match batch_converter.convert_batch(extracted) {
                                     Ok(filenames) => {
-                                        if let Some(uploader) = &s3_uploader {
+                                        if let Some(uploader) = &r2_uploader {
                                             for filename in &filenames {
                                                 let local_path = local_output.join(filename);
                                                 if let Err(e) =
@@ -258,7 +258,7 @@ async fn run_daily(date: Option<&str>, products: &str, output: &str) -> Result<(
     let destination = OutputDestination::from_str(output)?;
     let local_output = match &destination {
         OutputDestination::Local(path) => path.clone(),
-        OutputDestination::S3 { .. } => PathBuf::from("./temp_output"),
+        OutputDestination::R2 { .. } => PathBuf::from("./temp_output"),
     };
 
     std::fs::create_dir_all(&local_output).context("Failed to create output directory")?;
@@ -276,8 +276,8 @@ async fn run_daily(date: Option<&str>, products: &str, output: &str) -> Result<(
 
     let filenames = batch_converter.convert_batch(extracted)?;
 
-    if let OutputDestination::S3 { bucket, prefix } = &destination {
-        let uploader = S3Uploader::new(bucket.clone(), prefix.clone()).await?;
+    if let OutputDestination::R2 { bucket, prefix } = &destination {
+        let uploader = R2Uploader::new(bucket.clone(), prefix.clone()).await?;
         for filename in &filenames {
             let local_path = local_output.join(filename);
             uploader.upload_file(&local_path, filename).await?;
@@ -321,11 +321,11 @@ async fn run_extract_timeseries(
             let files = extractor.write_output(&output_path)?;
             info!("Wrote {} files to {}", files.len(), output_path.display());
         }
-        OutputDestination::S3 { bucket, prefix } => {
+        OutputDestination::R2 { bucket, prefix } => {
             let temp_dir = PathBuf::from("./temp_timeseries");
             let files = extractor.write_output(&temp_dir)?;
 
-            let uploader = S3Uploader::new(bucket.clone(), prefix.clone()).await?;
+            let uploader = R2Uploader::new(bucket.clone(), prefix.clone()).await?;
             for filename in &files {
                 let local_path = temp_dir.join(filename);
                 uploader.upload_file(&local_path, filename).await?;

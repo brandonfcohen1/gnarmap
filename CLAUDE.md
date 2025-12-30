@@ -18,11 +18,19 @@ gnarmap/
 - **Lint**: `bun run lint`
 - **Typecheck**: `bun run typecheck`
 
-### Pipeline (from packages/pipeline)
-- **Build**: `cargo build --release`
-- **Daily run**: `./target/release/snodas-pipeline daily --date yesterday --output s3://bucket/snodas`
-- **Backfill**: `./target/release/snodas-pipeline backfill --start 2023-01-01 --end 2023-12-31 --output ./output`
-- **Build Zarr**: `./target/release/snodas-pipeline build-zarr --cog-dir ./output --output ./zarr-output`
+### Pipeline (from root, uses package.json scripts)
+- **Build**: `bun run pipeline:build`
+- **Daily run**: `bun run pipeline:daily` (uploads to R2)
+- **Daily with date**: `bun run pipeline:daily -- --date 2024-12-27`
+- **Backfill**: `bun run pipeline:backfill -- --start 2024-12-27 --end 2024-12-30`
+- **Build Zarr**: `bun run pipeline:build-zarr` (local only)
+- **Append Zarr**: `bun run pipeline:build-zarr -- --append`
+- **Sync Zarr to R2**: `bun run pipeline:sync-zarr` (requires rclone with r2 remote configured)
+
+### Pipeline Direct Commands (from packages/pipeline)
+- **Daily to R2**: `./target/release/snodas-pipeline daily --date yesterday --output r2://gnarmap-historical/snodas`
+- **Backfill to R2**: `./target/release/snodas-pipeline backfill --start 2024-01-01 --end 2024-12-31 --output r2://gnarmap-historical/snodas`
+- **Build Zarr locally**: `./target/release/snodas-pipeline build-zarr --cog-dir ./output --output ./zarr-output`
 - **Append Zarr**: `./target/release/snodas-pipeline build-zarr --cog-dir ./output --output ./zarr-output --append`
 
 ## Web App Architecture (apps/web)
@@ -70,7 +78,7 @@ Rust pipeline for SNODAS data processing.
 - `extract.rs` - Tar/gz extraction
 - `convert.rs` - ENVI header generation, GDAL COG conversion
 - `zarr_builder.rs` - COG to Zarr V3 conversion with sparse storage
-- `storage.rs` - R2 upload
+- `storage.rs` - R2 upload (uses `r2://bucket/prefix` URLs)
 
 ### Key Features
 - Sparse Zarr storage (skips zero-value chunks, ~80% size reduction)
@@ -82,7 +90,7 @@ Rust pipeline for SNODAS data processing.
 ### TypeScript/JavaScript (Web App)
 - Use async/await for asynchronous operations
 - Keep functions small and modular
-- Extract shared utilities to `src/lib/` (e.g., `s3.ts` for R2 client, `zarr.ts` for Zarr access)
+- Extract shared utilities to `src/lib/` (e.g., `r2.ts` for R2 client, `zarr.ts` for Zarr access)
 - Use TypeScript interfaces for data shapes
 - Prefer `const` over `let`
 
