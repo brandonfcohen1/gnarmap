@@ -259,10 +259,7 @@ export default function Map() {
       <MapGL
         ref={mapRef}
         {...viewState}
-        onMove={(evt) => {
-          setViewState(evt.viewState);
-          console.log("zoom:", evt.viewState.zoom.toFixed(2));
-        }}
+        onMove={(evt) => setViewState(evt.viewState)}
         onLoad={handleMapLoad}
         onMouseEnter={() => setCursor("pointer")}
         onMouseLeave={() => setCursor("crosshair")}
@@ -278,8 +275,9 @@ export default function Map() {
         cursor={cursor}
         dragRotate={false}
         touchZoomRotate={false}
+        minZoom={4}
       >
-        <NavigationControl position="top-right" style={{ marginTop: "260px" }} />
+        <NavigationControl position="top-right" style={{ marginTop: "205px" }} />
 
         {layers.snowDepthRaster && rasterTileUrl && (
           <Source
@@ -292,6 +290,7 @@ export default function Map() {
             <Layer
               id="snow-depth-layer"
               type="raster"
+              minzoom={4}
               paint={{ "raster-opacity": 0.7 }}
             />
           </Source>
