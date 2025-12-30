@@ -1,0 +1,5 @@
+- [ ] Add station script to modern ETL process
+- [x] Deprecate s3://graphsnowgeojson
+- [x] Style/code quality
+- [x] security
+- [ ] ensure historical data
