@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "bun run --cwd apps/web dev",
     "build": "bun run --cwd apps/web build",
+    "start": "bun run --cwd apps/web start",
     "lint": "bun run --cwd apps/web lint",
     "typecheck": "bun run --cwd apps/web typecheck",
     "pipeline:build": "cd packages/pipeline && cargo build --release",
