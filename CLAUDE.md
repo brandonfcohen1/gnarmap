@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 gnarmap/
-├── apps/web/           # Next.js web application
+├── apps/web/           # Next.js web application (deployed to Cloudflare Workers)
 ├── packages/pipeline/  # Rust data pipeline
 ```
 
@@ -17,6 +17,8 @@ gnarmap/
 - **Build**: `bun run build`
 - **Lint**: `bun run lint`
 - **Typecheck**: `bun run typecheck`
+- **Preview (Cloudflare)**: `cd apps/web && bun run preview`
+- **Deploy (Cloudflare)**: `cd apps/web && bun run deploy`
 
 ### Pipeline (from root, uses package.json scripts)
 - **Build**: `bun run pipeline:build`
@@ -33,40 +35,77 @@ gnarmap/
 - **Build Zarr locally**: `./target/release/snodas-pipeline build-zarr --cog-dir ./output --output ./zarr-output`
 - **Append Zarr**: `./target/release/snodas-pipeline build-zarr --cog-dir ./output --output ./zarr-output --append`
 
+## Deployment
+
+### Cloudflare Workers (Web App)
+
+The web app is deployed to Cloudflare Workers using OpenNext. Configuration is in `apps/web/wrangler.jsonc`.
+
+**First-time setup:**
+1. Install Wrangler CLI: `npm install -g wrangler`
+2. Login to Cloudflare: `wrangler login`
+3. Create R2 bucket: `wrangler r2 bucket create gnarmap-historical`
+4. Set environment variables in Cloudflare dashboard or via `wrangler secret put`
+
+**Deploy:**
+```bash
+cd apps/web
+bun run deploy
+```
+
+**Environment Variables (set in Cloudflare dashboard):**
+- `R2_ACCOUNT_ID` - Cloudflare account ID
+- `R2_ACCESS_KEY_ID` - R2 API token access key
+- `R2_SECRET_ACCESS_KEY` - R2 API token secret
+- `NEXT_PUBLIC_ZARR_URL` - Public URL for Zarr data
+
+### R2 Setup
+
+1. Create bucket `gnarmap-historical` in Cloudflare dashboard
+2. Enable public access for the bucket (Settings > Public access)
+3. Note the public URL (e.g., `https://pub-xxx.r2.dev`)
+4. Create API token with R2 read/write permissions
+
+### rclone Configuration (for Zarr sync)
+
+Create `~/.config/rclone/rclone.conf`:
+```ini
+[r2]
+type = s3
+provider = Cloudflare
+access_key_id = YOUR_ACCESS_KEY
+secret_access_key = YOUR_SECRET_KEY
+endpoint = https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com
+```
+
 ## Web App Architecture (apps/web)
 
-Next.js 15 app (App Router) that visualizes NOHRSC Snow Analysis data using react-map-gl with MapLibre.
+Next.js 15 app (App Router) deployed to Cloudflare Workers using @opennextjs/cloudflare.
 
 ### Key Components
 - **Map** (`src/components/Map.tsx`) - Main map with snow depth raster, station markers, popups
-- **SnowChart** (`src/components/SnowChart.tsx`) - Historical time series chart using Zarr data
+- **SnowChart** (`src/components/SnowChart.tsx`) - Historical time series chart using Zarr data (client-side)
 - **Legend** (`src/components/Legend.tsx`) - Collapsible legend
 - **DatePicker** (`src/components/DatePicker.tsx`) - Date selection for historical views
 - **LayerControls** (`src/components/LayerControls.tsx`) - Toggle map layers
 
 ### Zarr Integration
-- `src/lib/zarr.ts` - Direct chunk fetching for Zarr V3 with fflate gzip decompression
+- `src/lib/zarr.ts` - Client-side chunk fetching for Zarr V3 with fflate gzip decompression
+- Fetches directly from R2 public URL (offloads memory from server)
 - Parallel chunk loading for performance
-- Fetches from R2-hosted Zarr store (public access via r2.dev subdomain)
-- Queries native resolution (6935×3351) with 365×256×256 chunks
+- Queries native resolution (6935x3351) with 365x256x256 chunks
 
 ### API Routes
-- `/api/tiles/[date]/[z]/[x]/[y]` - COG tile proxy
+- `/api/tiles/[date]/[z]/[x]/[y]` - COG tile generation (uses upng-js for Workers compatibility)
 - `/api/identify` - Point query for snow depth
-- `/api/stations/[type]` - Server-side proxy for private GeoJSON (snowdepth, snowdensity, snowfall)
+- `/api/dates` - Available dates list
+- `/api/stations/[type]` - Station GeoJSON proxy (snowdepth, snowdensity, snowfall)
 
 ### Data Sources (Cloudflare R2)
 All data stored in `gnarmap-historical` R2 bucket:
 - COG tiles: `/snodas/`
 - Zarr store: `/zarr/`
 - Station GeoJSON: `/geojson/`
-
-### Environment Variables (Web App)
-- `R2_ACCOUNT_ID` - Cloudflare account ID
-- `R2_ACCESS_KEY_ID` - R2 API token access key
-- `R2_SECRET_ACCESS_KEY` - R2 API token secret
-- `R2_PUBLIC_URL` - Public URL for COG access (optional, uses presigned URLs if not set)
-- `NEXT_PUBLIC_ZARR_URL` - Public URL for Zarr client-side access (required)
 
 ## Pipeline Architecture (packages/pipeline)
 
@@ -83,16 +122,18 @@ Rust pipeline for SNODAS data processing.
 ### Key Features
 - Sparse Zarr storage (skips zero-value chunks, ~80% size reduction)
 - Append mode for fast daily updates (~10-15s per day)
-- Native resolution time series (6935×3351 pixels × 8000+ days)
+- Native resolution time series (6935x3351 pixels x 8000+ days)
 
 ## Code Conventions
 
 ### TypeScript/JavaScript (Web App)
+- Use arrow functions for all function declarations
 - Use async/await for asynchronous operations
 - Keep functions small and modular
 - Extract shared utilities to `src/lib/` (e.g., `r2.ts` for R2 client, `zarr.ts` for Zarr access)
 - Use TypeScript interfaces for data shapes
 - Prefer `const` over `let`
+- No native Node.js modules (must be Workers-compatible)
 
 ### Rust (Pipeline)
 - One module per file with clear responsibilities
