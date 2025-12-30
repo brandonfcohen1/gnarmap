@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { getTimeSeriesForPixel } from "@/lib/zarr";
+import LoadingOverlay from "./LoadingOverlay";
 
 interface SnowChartProps {
   lng: number;
@@ -239,15 +240,8 @@ export default function SnowChart({ lng, lat, onClose }: SnowChartProps) {
           </div>
         </div>
 
-        <div className={`p-4 relative ${maximized ? "flex-1 min-h-0" : ""}`}>
-          {loading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-10 rounded gap-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-              <p className="text-sm text-gray-600">
-                Calculating history. This may take a few moments.
-              </p>
-            </div>
-          )}
+        <div className={`p-4 relative ${maximized ? "flex-1 min-h-0" : "h-[360px]"}`}>
+          {loading && <LoadingOverlay />}
           {error && (
             <div className="flex items-center justify-center h-full text-gray-500">
               {error}
