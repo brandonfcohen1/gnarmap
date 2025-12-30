@@ -113,6 +113,8 @@ export default function Map() {
   const [cursor, setCursor] = useState("crosshair");
   const [basemap, setBasemap] = useState("positron");
   const [chartLocation, setChartLocation] = useState<{ lng: number; lat: number } | null>(null);
+  const [rasterLoading, setRasterLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const [layers, setLayers] = useState({
     snowDepthRaster: true,
@@ -146,6 +148,19 @@ export default function Map() {
       setMapLoaded(true);
     };
     img.src = "/snowicon.png";
+
+    map.on("sourcedataloading", (e) => {
+      if (e.sourceId === "snow-depth-raster") {
+        setTimeout(() => setRasterLoading(true), 0);
+      }
+    });
+
+    map.on("idle", () => {
+      setTimeout(() => {
+        setRasterLoading(false);
+        setInitialLoadComplete(true);
+      }, 0);
+    });
   }, []);
 
   const handleMapClick = useCallback(async (e: MapLayerMouseEvent) => {
@@ -397,6 +412,14 @@ export default function Map() {
         </button>
       )}
       <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
+      {(rasterLoading || !initialLoadComplete) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-20 pointer-events-none">
+          <div className="bg-white rounded-lg px-4 py-3 shadow-lg flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-medium text-gray-700">Loading snow data...</span>
+          </div>
+        </div>
+      )}
       {chartLocation && (
         <SnowChart
           lng={chartLocation.lng}
