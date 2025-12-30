@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getR2Object, r2Client, BUCKET } from "@/lib/r2";
+import { getR2Object, getR2Client, BUCKET } from "@/lib/r2";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import * as fflate from "fflate";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
@@ -17,16 +17,16 @@ interface ZarrMetadata {
 let cachedDates: string[] | null = null;
 let cachedMetadata: ZarrMetadata | null = null;
 
-async function getDates(): Promise<string[]> {
+const getDates = async (): Promise<string[]> => {
   if (!cachedDates) {
     const data = await getR2Object("zarr/dates.json");
     if (!data) throw new Error("Failed to fetch dates");
     cachedDates = JSON.parse(data);
   }
   return cachedDates!;
-}
+};
 
-async function getMetadata(): Promise<ZarrMetadata> {
+const getMetadata = async (): Promise<ZarrMetadata> => {
   if (!cachedMetadata) {
     const data = await getR2Object("zarr/snow_depth/zarr.json");
     if (!data) throw new Error("Failed to fetch metadata");
@@ -38,39 +38,39 @@ async function getMetadata(): Promise<ZarrMetadata> {
     };
   }
   return cachedMetadata!;
-}
+};
 
-function lngLatToPixel(
+const lngLatToPixel = (
   lng: number,
   lat: number,
   bounds: ZarrMetadata["bounds"],
   width: number,
   height: number
-): { x: number; y: number } | null {
+): { x: number; y: number } | null => {
   if (lng < bounds.west || lng > bounds.east || lat < bounds.south || lat > bounds.north) {
     return null;
   }
   const x = Math.floor(((lng - bounds.west) / (bounds.east - bounds.west)) * width);
   const y = Math.floor(((bounds.north - lat) / (bounds.north - bounds.south)) * height);
   return { x: Math.min(x, width - 1), y: Math.min(y, height - 1) };
-}
+};
 
-async function fetchChunk(tc: number, chunkY: number, chunkX: number): Promise<Int16Array | null> {
+const fetchChunk = async (tc: number, chunkY: number, chunkX: number): Promise<Int16Array | null> => {
   try {
     const command = new GetObjectCommand({
       Bucket: BUCKET,
       Key: `zarr/snow_depth/c/${tc}/${chunkY}/${chunkX}`,
     });
-    const response = await r2Client.send(command);
+    const response = await getR2Client().send(command);
     const compressed = new Uint8Array(await response.Body!.transformToByteArray());
     const decompressed = fflate.gunzipSync(compressed);
     return new Int16Array(decompressed.buffer);
   } catch {
     return null;
   }
-}
+};
 
-export async function GET(request: NextRequest) {
+export const GET = async (request: NextRequest) => {
   const ip = getClientIp(request);
   const { allowed } = checkRateLimit(ip);
 
@@ -152,4 +152,4 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json(results);
-}
+};

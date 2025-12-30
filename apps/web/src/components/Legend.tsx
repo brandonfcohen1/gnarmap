@@ -16,7 +16,7 @@ const LEGEND_ITEMS = [
   { label: "> 180", color: "rgb(220, 20, 100)" },
 ];
 
-export default function Legend() {
+const Legend = () => {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -52,4 +52,6 @@ export default function Legend() {
       )}
     </div>
   );
-}
+};
+
+export default Legend;

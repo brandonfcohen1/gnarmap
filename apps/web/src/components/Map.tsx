@@ -92,7 +92,7 @@ const unclusteredPointLayer = (id: string): LayerProps => ({
   },
 });
 
-export default function Map() {
+const Map = () => {
   const mapRef = useRef<MapRef>(null);
   const [viewState, setViewState] = useState({
     longitude: -96.7,
@@ -422,4 +422,6 @@ export default function Map() {
       )}
     </div>
   );
-}
+};
+
+export default Map;

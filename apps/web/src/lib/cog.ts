@@ -5,7 +5,7 @@ import { getPresignedUrl, PRESIGNED_URL_EXPIRY } from "./r2";
 const tiffCache = new Map<string, { tiff: GeoTIFF; expiry: number }>();
 const pool = new Pool();
 
-export async function getCOG(date: string): Promise<GeoTIFF> {
+export const getCOG = async (date: string): Promise<GeoTIFF> => {
   const cacheKey = date;
   const now = Date.now();
 
@@ -27,28 +27,27 @@ export async function getCOG(date: string): Promise<GeoTIFF> {
   });
 
   return tiff;
-}
+};
 
-export function tile2lng(x: number, z: number): number {
-  return (x / Math.pow(2, z)) * 360 - 180;
-}
+export const tile2lng = (x: number, z: number): number =>
+  (x / Math.pow(2, z)) * 360 - 180;
 
-export function tile2lat(y: number, z: number): number {
+export const tile2lat = (y: number, z: number): number => {
   const n = Math.PI - (2 * Math.PI * y) / Math.pow(2, z);
   return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
-}
+};
 
-export function getTileBounds(
+export const getTileBounds = (
   x: number,
   y: number,
   z: number
-): [number, number, number, number] {
+): [number, number, number, number] => {
   const west = tile2lng(x, z);
   const north = tile2lat(y, z);
   const east = tile2lng(x + 1, z);
   const south = tile2lat(y + 1, z);
   return [west, south, east, north];
-}
+};
 
 export interface TileData {
   data: Int16Array;
@@ -58,11 +57,11 @@ export interface TileData {
   destHeight: number;
 }
 
-export async function readTileData(
+export const readTileData = async (
   image: GeoTIFFImage,
   bounds: [number, number, number, number],
   tileSize: number = 256
-): Promise<TileData | null> {
+): Promise<TileData | null> => {
   const [tileWest, tileSouth, tileEast, tileNorth] = bounds;
   const bbox = image.getBoundingBox();
   const [imgWest, imgSouth, imgEast, imgNorth] = bbox;
@@ -125,9 +124,9 @@ export async function readTileData(
     destWidth,
     destHeight,
   };
-}
+};
 
-export function getSnowDepthColor(valueInMm: number): [number, number, number, number] {
+export const getSnowDepthColor = (valueInMm: number): [number, number, number, number] => {
   if (valueInMm <= 0 || valueInMm === -9999) {
     return [0, 0, 0, 0];
   }
@@ -145,13 +144,13 @@ export function getSnowDepthColor(valueInMm: number): [number, number, number, n
   if (inches < 120) return [140, 40, 160, 250];
   if (inches < 180) return [180, 30, 140, 250];
   return [220, 20, 100, 255];
-}
+};
 
-export async function getValueAtPoint(
+export const getValueAtPoint = async (
   image: GeoTIFFImage,
   lng: number,
   lat: number
-): Promise<number | null> {
+): Promise<number | null> => {
   const bbox = image.getBoundingBox();
   const [imgWest, imgSouth, imgEast, imgNorth] = bbox;
 
@@ -177,4 +176,4 @@ export async function getValueAtPoint(
 
   const value = (data[0] as Int16Array)[0];
   return value === -9999 ? null : value;
-}
+};

@@ -14,26 +14,26 @@ type ViewMode = "days" | "months" | "years";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-function parseDate(dateStr: string): Date {
+const parseDate = (dateStr: string): Date => {
   const year = parseInt(dateStr.slice(0, 4));
   const month = parseInt(dateStr.slice(4, 6)) - 1;
   const day = parseInt(dateStr.slice(6, 8));
   return new Date(year, month, day);
-}
+};
 
-function formatDateStr(date: Date): string {
+const formatDateStr = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}${month}${day}`;
-}
+};
 
-function formatDisplayDate(dateStr: string): string {
+const formatDisplayDate = (dateStr: string): string => {
   const date = parseDate(dateStr);
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
+};
 
-export default function DatePicker({ selectedDate, onDateChange, enabled = true, onReady }: DatePickerProps) {
+const DatePicker = ({ selectedDate, onDateChange, enabled = true, onReady }: DatePickerProps) => {
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -85,12 +85,12 @@ export default function DatePicker({ selectedDate, onDateChange, enabled = true,
   }, [enabled, hasFetched, selectedDate, onDateChange, onReady]);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setViewMode("days");
       }
-    }
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -113,29 +113,23 @@ export default function DatePicker({ selectedDate, onDateChange, enabled = true,
     return days;
   }, []);
 
-  const prevMonth = () => {
+  const prevMonth = () =>
     setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
-  };
 
-  const nextMonth = () => {
+  const nextMonth = () =>
     setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1));
-  };
 
-  const prevYear = () => {
+  const prevYear = () =>
     setViewDate(new Date(viewDate.getFullYear() - 1, viewDate.getMonth(), 1));
-  };
 
-  const nextYear = () => {
+  const nextYear = () =>
     setViewDate(new Date(viewDate.getFullYear() + 1, viewDate.getMonth(), 1));
-  };
 
-  const prevDecade = () => {
+  const prevDecade = () =>
     setViewDate(new Date(viewDate.getFullYear() - 12, viewDate.getMonth(), 1));
-  };
 
-  const nextDecade = () => {
+  const nextDecade = () =>
     setViewDate(new Date(viewDate.getFullYear() + 12, viewDate.getMonth(), 1));
-  };
 
   const selectDate = (day: number) => {
     const newDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
@@ -167,9 +161,7 @@ export default function DatePicker({ selectedDate, onDateChange, enabled = true,
     return dateStr === selectedDate;
   };
 
-  const isYearAvailable = (year: number): boolean => {
-    return availableYears.includes(year);
-  };
+  const isYearAvailable = (year: number): boolean => availableYears.includes(year);
 
   const getYearsForView = (): number[] => {
     const currentYear = viewDate.getFullYear();
@@ -420,4 +412,6 @@ export default function DatePicker({ selectedDate, onDateChange, enabled = true,
       )}
     </div>
   );
-}
+};
+
+export default DatePicker;

@@ -25,11 +25,11 @@ const STAT_OPTIONS = ["avg", "max"] as const;
 type AggType = (typeof AGG_OPTIONS)[number];
 type StatType = (typeof STAT_OPTIONS)[number];
 
-function aggregateData(
+const aggregateData = (
   data: { date: string; value: number }[],
   aggType: AggType,
   statType: StatType
-): { date: string; value: number }[] {
+): { date: string; value: number }[] => {
   if (aggType === "daily") return data;
 
   const buckets = new Map<string, { sum: number; count: number; max: number }>();
@@ -72,24 +72,24 @@ function aggregateData(
   }
 
   return result.sort((a, b) => a.date.localeCompare(b.date));
-}
+};
 
-function formatDateAxis(dateStr: string): string {
+const formatDateAxis = (dateStr: string): string => {
   const month = parseInt(dateStr.slice(4, 6));
   const year = dateStr.slice(2, 4);
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${months[month - 1]} '${year}`;
-}
+};
 
-function formatDateTooltip(dateStr: string): string {
+const formatDateTooltip = (dateStr: string): string => {
   const year = dateStr.slice(0, 4);
   const month = parseInt(dateStr.slice(4, 6));
   const day = parseInt(dateStr.slice(6, 8));
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${months[month - 1]} ${day}, ${year}`;
-}
+};
 
-export default function SnowChart({ lng, lat, onClose }: SnowChartProps) {
+const SnowChart = ({ lng, lat, onClose }: SnowChartProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [years, setYears] = useState(5);
@@ -288,4 +288,6 @@ export default function SnowChart({ lng, lat, onClose }: SnowChartProps) {
       </div>
     </div>
   );
-}
+};
+
+export default SnowChart;

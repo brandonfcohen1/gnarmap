@@ -3,12 +3,12 @@ interface TimeSeriesPoint {
   value: number;
 }
 
-export async function getTimeSeriesForPixel(
+export const getTimeSeriesForPixel = async (
   lng: number,
   lat: number,
   startDate?: string,
   endDate?: string
-): Promise<TimeSeriesPoint[]> {
+): Promise<TimeSeriesPoint[]> => {
   const params = new URLSearchParams({
     lng: lng.toString(),
     lat: lat.toString(),
@@ -21,4 +21,4 @@ export async function getTimeSeriesForPixel(
     throw new Error("Failed to fetch timeseries data");
   }
   return response.json();
-}
+};

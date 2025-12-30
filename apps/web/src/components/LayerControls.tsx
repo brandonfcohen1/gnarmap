@@ -14,7 +14,7 @@ interface LayerControlsProps {
   setLayers: Dispatch<SetStateAction<Layers>>;
 }
 
-export default function LayerControls({ layers, setLayers }: LayerControlsProps) {
+const LayerControls = ({ layers, setLayers }: LayerControlsProps) => {
   const [collapsed, setCollapsed] = useState(false);
 
   const toggle = (key: keyof Layers) => {
@@ -81,4 +81,6 @@ export default function LayerControls({ layers, setLayers }: LayerControlsProps)
       )}
     </div>
   );
-}
+};
+
+export default LayerControls;

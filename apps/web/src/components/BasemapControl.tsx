@@ -14,7 +14,7 @@ const basemaps = [
   { id: "osm", name: "Liberty" },
 ];
 
-export default function BasemapControl({ basemap, setBasemap }: BasemapControlProps) {
+const BasemapControl = ({ basemap, setBasemap }: BasemapControlProps) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -64,4 +64,6 @@ export default function BasemapControl({ basemap, setBasemap }: BasemapControlPr
       )}
     </div>
   );
-}
+};
+
+export default BasemapControl;

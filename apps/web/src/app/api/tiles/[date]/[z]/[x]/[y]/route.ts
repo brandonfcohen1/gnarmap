@@ -3,10 +3,10 @@ import sharp from "sharp";
 import { getCOG, getTileBounds, readTileData, getSnowDepthColor } from "@/lib/cog";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
-export async function GET(
+export const GET = async (
   request: NextRequest,
   { params }: { params: Promise<{ date: string; z: string; x: string; y: string }> }
-) {
+) => {
   const ip = getClientIp(request);
   const { allowed } = checkRateLimit(ip);
 
@@ -107,4 +107,4 @@ export async function GET(
   } catch {
     return new NextResponse("Error generating tile", { status: 500 });
   }
-}
+};

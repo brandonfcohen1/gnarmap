@@ -1,6 +1,6 @@
 "use client";
 
-export default function LoadingOverlay() {
+const LoadingOverlay = () => {
   return (
     <div className="absolute inset-0 z-40 bg-gray-100 flex flex-col items-center justify-center rounded-b-lg">
       <div className="relative w-24 h-24 mb-4">
@@ -50,4 +50,6 @@ export default function LoadingOverlay() {
       `}</style>
     </div>
   );
-}
+};
+
+export default LoadingOverlay;

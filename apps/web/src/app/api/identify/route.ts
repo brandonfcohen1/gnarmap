@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCOG, getValueAtPoint } from "@/lib/cog";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
-export async function GET(request: NextRequest) {
+export const GET = async (request: NextRequest) => {
   const ip = getClientIp(request);
   const { allowed } = checkRateLimit(ip);
 
@@ -46,4 +46,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+};

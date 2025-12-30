@@ -5,7 +5,7 @@ interface InfoModalProps {
   onClose: () => void;
 }
 
-export default function InfoModal({ open, onClose }: InfoModalProps) {
+const InfoModal = ({ open, onClose }: InfoModalProps) => {
   if (!open) return null;
 
   return (
@@ -87,4 +87,6 @@ export default function InfoModal({ open, onClose }: InfoModalProps) {
       </div>
     </div>
   );
-}
+};
+
+export default InfoModal;

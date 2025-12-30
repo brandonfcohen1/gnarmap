@@ -12,7 +12,7 @@ setInterval(() => {
   }
 }, WINDOW_MS);
 
-export function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
+export const checkRateLimit = (ip: string): { allowed: boolean; remaining: number } => {
   const now = Date.now();
   const record = requests.get(ip);
 
@@ -27,12 +27,12 @@ export function checkRateLimit(ip: string): { allowed: boolean; remaining: numbe
 
   record.count++;
   return { allowed: true, remaining: MAX_REQUESTS - record.count };
-}
+};
 
-export function getClientIp(request: Request): string {
+export const getClientIp = (request: Request): string => {
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
     return forwarded.split(",")[0].trim();
   }
   return "unknown";
-}
+};

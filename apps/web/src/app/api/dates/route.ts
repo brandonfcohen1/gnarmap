@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { paginateListObjectsV2 } from "@aws-sdk/client-s3";
-import { r2Client, BUCKET } from "@/lib/r2";
+import { getR2Client, BUCKET } from "@/lib/r2";
 
 const PREFIX = "snodas/";
 
@@ -8,7 +8,7 @@ let cachedDates: string[] | null = null;
 let cacheExpiry = 0;
 const CACHE_TTL = 5 * 60 * 1000;
 
-async function fetchDates(): Promise<string[]> {
+const fetchDates = async (): Promise<string[]> => {
   const now = Date.now();
   if (cachedDates && cacheExpiry > now) {
     return cachedDates;
@@ -16,7 +16,7 @@ async function fetchDates(): Promise<string[]> {
 
   const dates: string[] = [];
   const paginator = paginateListObjectsV2(
-    { client: r2Client },
+    { client: getR2Client() },
     { Bucket: BUCKET, Prefix: PREFIX }
   );
 
@@ -38,13 +38,13 @@ async function fetchDates(): Promise<string[]> {
   cachedDates = dates;
   cacheExpiry = now + CACHE_TTL;
   return dates;
-}
+};
 
-export async function GET() {
+export const GET = async () => {
   try {
     const dates = await fetchDates();
     return NextResponse.json({ dates });
   } catch {
     return NextResponse.json({ error: "Failed to list dates" }, { status: 500 });
   }
-}
+};

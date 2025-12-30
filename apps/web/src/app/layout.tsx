@@ -6,11 +6,11 @@ export const metadata: Metadata = {
   description: "Visualize NOHRSC Snow Depth data",
 };
 
-export default function RootLayout({
+const RootLayout = ({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+}>) => {
   return (
     <html lang="en">
       <body className="antialiased">
@@ -24,4 +24,6 @@ export default function RootLayout({
       </body>
     </html>
   );
-}
+};
+
+export default RootLayout;
