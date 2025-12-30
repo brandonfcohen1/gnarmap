@@ -11,7 +11,7 @@ use zarrs::filesystem::FilesystemStore;
 use zarrs::group::GroupBuilder;
 use zarrs::storage::ReadableWritableListableStorage;
 
-use crate::snodas::{BBOX_POST_2013, MASKED_COLS, MASKED_ROWS, NODATA_VALUE};
+use crate::snodas::{extract_date_from_cog_filename, BBOX_POST_2013, MASKED_COLS, MASKED_ROWS, NODATA_VALUE};
 
 const CHUNK_TIME: u64 = 365;
 const CHUNK_Y: u64 = 256;
@@ -123,7 +123,7 @@ impl ZarrBuilder {
 
         let mut all_dates: BTreeSet<String> = BTreeSet::new();
         for path in &cog_files {
-            if let Some(date) = Self::extract_date_from_filename(
+            if let Some(date) = extract_date_from_cog_filename(
                 path.file_name().and_then(|n| n.to_str()).unwrap_or(""),
             ) {
                 all_dates.insert(date);
@@ -188,7 +188,7 @@ impl ZarrBuilder {
         let files_to_process: Vec<(PathBuf, String, usize)> = cog_files
             .into_iter()
             .filter_map(|path| {
-                let date = Self::extract_date_from_filename(
+                let date = extract_date_from_cog_filename(
                     path.file_name().and_then(|n| n.to_str()).unwrap_or(""),
                 )?;
                 if new_dates.contains(&date) {
@@ -308,25 +308,8 @@ impl ZarrBuilder {
         Ok(nonzero_chunks)
     }
 
-    fn extract_date_from_filename(filename: &str) -> Option<String> {
-        filename
-            .strip_prefix("snodas_snow_depth_")?
-            .strip_suffix(".tif")
-            .map(|s| s.to_string())
-    }
-
     pub fn dates_count(&self) -> usize {
         self.dates.len()
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_date_extraction() {
-        let date = ZarrBuilder::extract_date_from_filename("snodas_snow_depth_20231201.tif");
-        assert_eq!(date, Some("20231201".to_string()));
-    }
-}

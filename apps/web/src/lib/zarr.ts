@@ -1,6 +1,6 @@
 import * as fflate from "fflate";
 
-const ZARR_BASE_URL = "https://gnarmap-historical.s3.us-east-2.amazonaws.com/zarr";
+const ZARR_BASE_URL = process.env.NEXT_PUBLIC_ZARR_URL!;
 
 interface ZarrMetadata {
   bounds: {

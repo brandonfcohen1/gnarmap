@@ -1,15 +1,7 @@
 import { NextResponse } from "next/server";
-import { S3Client, paginateListObjectsV2 } from "@aws-sdk/client-s3";
+import { paginateListObjectsV2 } from "@aws-sdk/client-s3";
+import { s3Client, BUCKET } from "@/lib/s3";
 
-const s3Client = new S3Client({
-  region: "us-east-2",
-  credentials: {
-    accessKeyId: process.env.GNARMAP_AWS_ACCESS_KEY!,
-    secretAccessKey: process.env.GNARMAP_AWS_SECRET!,
-  },
-});
-
-const BUCKET = "gnarmap-historical";
 const PREFIX = "snodas/";
 
 let cachedDates: string[] | null = null;

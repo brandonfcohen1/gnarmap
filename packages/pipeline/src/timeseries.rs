@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
-use crate::snodas::{BBOX_POST_2013, NODATA_VALUE};
+use crate::snodas::{extract_date_from_cog_filename, BBOX_POST_2013, NODATA_VALUE};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GridPoint {
@@ -159,7 +159,7 @@ impl TimeSeriesExtractor {
             .and_then(|s| s.to_str())
             .unwrap_or("");
 
-        let date = Self::extract_date_from_filename(filename)
+        let date = extract_date_from_cog_filename(filename)
             .context("Failed to extract date from filename")?;
 
         if self.existing_dates.contains(&date) {
@@ -241,7 +241,7 @@ impl TimeSeriesExtractor {
             .filter(|p| {
                 p.file_name()
                     .and_then(|n| n.to_str())
-                    .and_then(Self::extract_date_from_filename)
+                    .and_then(extract_date_from_cog_filename)
                     .map(|d| self.existing_dates.contains(&d))
                     .unwrap_or(false)
             })
@@ -352,13 +352,6 @@ impl TimeSeriesExtractor {
         Ok(filenames)
     }
 
-    fn extract_date_from_filename(filename: &str) -> Option<String> {
-        let re_pattern = filename
-            .strip_prefix("snodas_snow_depth_")?
-            .strip_suffix(".tif")?;
-        Some(re_pattern.to_string())
-    }
-
     pub fn grid_point_count(&self) -> usize {
         self.grid_points.len()
     }
@@ -387,9 +380,4 @@ mod tests {
         assert_eq!(point.grid_id(), "40.5_-105.5");
     }
 
-    #[test]
-    fn test_date_extraction() {
-        let date = TimeSeriesExtractor::extract_date_from_filename("snodas_snow_depth_20231201.tif");
-        assert_eq!(date, Some("20231201".to_string()));
-    }
 }

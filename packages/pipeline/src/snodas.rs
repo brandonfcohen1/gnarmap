@@ -203,6 +203,13 @@ impl SnodasFile {
     }
 }
 
+pub fn extract_date_from_cog_filename(filename: &str) -> Option<String> {
+    filename
+        .strip_prefix("snodas_snow_depth_")?
+        .strip_suffix(".tif")
+        .map(|s| s.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -234,5 +241,11 @@ mod tests {
         assert!(url.contains("2023"));
         assert!(url.contains("12_Dec"));
         assert!(url.contains("SNODAS_20231215.tar"));
+    }
+
+    #[test]
+    fn test_extract_date_from_cog_filename() {
+        let date = extract_date_from_cog_filename("snodas_snow_depth_20231201.tif");
+        assert_eq!(date, Some("20231201".to_string()));
     }
 }

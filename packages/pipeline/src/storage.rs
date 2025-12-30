@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client as S3Client;
+use aws_sdk_s3::config::{Credentials, Region};
 use std::path::Path;
 use tracing::info;
 
@@ -12,8 +13,18 @@ pub struct S3Uploader {
 
 impl S3Uploader {
     pub async fn new(bucket: String, prefix: String) -> Result<Self> {
-        let config = aws_config::load_from_env().await;
-        let client = S3Client::new(&config);
+        let account_id = std::env::var("R2_ACCOUNT_ID").context("R2_ACCOUNT_ID required")?;
+        let access_key = std::env::var("R2_ACCESS_KEY_ID").context("R2_ACCESS_KEY_ID required")?;
+        let secret_key =
+            std::env::var("R2_SECRET_ACCESS_KEY").context("R2_SECRET_ACCESS_KEY required")?;
+
+        let credentials = Credentials::new(access_key, secret_key, None, None, "r2");
+        let config = aws_sdk_s3::Config::builder()
+            .region(Region::new("auto"))
+            .endpoint_url(format!("https://{}.r2.cloudflarestorage.com", account_id))
+            .credentials_provider(credentials)
+            .build();
+        let client = S3Client::from_conf(config);
 
         Ok(Self {
             client,
@@ -41,7 +52,7 @@ impl S3Uploader {
             .content_type("image/tiff")
             .send()
             .await
-            .context("Failed to upload to S3")?;
+            .context("Failed to upload to R2")?;
 
         let url = format!("s3://{}/{}", self.bucket, key);
         info!("Uploaded {} to {}", local_path.display(), url);

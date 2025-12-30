@@ -1,29 +1,9 @@
 import { fromUrl, Pool } from "geotiff";
 import type { GeoTIFF, GeoTIFFImage } from "geotiff";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getPresignedUrl, PRESIGNED_URL_EXPIRY } from "./s3";
 
 const tiffCache = new Map<string, { tiff: GeoTIFF; expiry: number }>();
 const pool = new Pool();
-
-const s3Client = new S3Client({
-  region: "us-east-2",
-  credentials: {
-    accessKeyId: process.env.GNARMAP_AWS_ACCESS_KEY!,
-    secretAccessKey: process.env.GNARMAP_AWS_SECRET!,
-  },
-});
-
-const BUCKET = "gnarmap-historical";
-const PRESIGNED_URL_EXPIRY = 3600;
-
-export async function getPresignedUrl(key: string): Promise<string> {
-  const command = new GetObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-  });
-  return getSignedUrl(s3Client, command, { expiresIn: PRESIGNED_URL_EXPIRY });
-}
 
 export async function getCOG(date: string): Promise<GeoTIFF> {
   const cacheKey = date;

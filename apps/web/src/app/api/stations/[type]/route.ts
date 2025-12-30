@@ -1,15 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-
-const s3 = new S3Client({
-  region: "us-east-2",
-  credentials: process.env.GNARMAP_AWS_ACCESS_KEY && process.env.GNARMAP_AWS_SECRET
-    ? {
-        accessKeyId: process.env.GNARMAP_AWS_ACCESS_KEY,
-        secretAccessKey: process.env.GNARMAP_AWS_SECRET,
-      }
-    : undefined,
-});
+import { getS3Object } from "@/lib/s3";
 
 const VALID_TYPES = ["snowdepth", "snowdensity", "snowfall"];
 
@@ -24,13 +14,7 @@ export async function GET(
   }
 
   try {
-    const command = new GetObjectCommand({
-      Bucket: "gnarmap-historical",
-      Key: `geojson/${type}.json`,
-    });
-
-    const response = await s3.send(command);
-    const body = await response.Body?.transformToString();
+    const body = await getS3Object(`geojson/${type}.json`);
 
     return new NextResponse(body, {
       headers: {
