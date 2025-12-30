@@ -5,13 +5,13 @@ use aws_sdk_s3::config::{Credentials, Region};
 use std::path::Path;
 use tracing::info;
 
-pub struct S3Uploader {
+pub struct R2Uploader {
     client: S3Client,
     bucket: String,
     prefix: String,
 }
 
-impl S3Uploader {
+impl R2Uploader {
     pub async fn new(bucket: String, prefix: String) -> Result<Self> {
         let account_id = std::env::var("R2_ACCOUNT_ID").context("R2_ACCOUNT_ID required")?;
         let access_key = std::env::var("R2_ACCESS_KEY_ID").context("R2_ACCESS_KEY_ID required")?;
@@ -54,7 +54,7 @@ impl S3Uploader {
             .await
             .context("Failed to upload to R2")?;
 
-        let url = format!("s3://{}/{}", self.bucket, key);
+        let url = format!("r2://{}/{}", self.bucket, key);
         info!("Uploaded {} to {}", local_path.display(), url);
 
         Ok(url)
@@ -64,17 +64,17 @@ impl S3Uploader {
 
 pub enum OutputDestination {
     Local(std::path::PathBuf),
-    S3 { bucket: String, prefix: String },
+    R2 { bucket: String, prefix: String },
 }
 
 impl OutputDestination {
     pub fn from_str(s: &str) -> Result<Self> {
-        if s.starts_with("s3://") {
-            let path = s.strip_prefix("s3://").unwrap();
+        if s.starts_with("r2://") {
+            let path = s.strip_prefix("r2://").unwrap();
             let parts: Vec<&str> = path.splitn(2, '/').collect();
             let bucket = parts[0].to_string();
             let prefix = parts.get(1).unwrap_or(&"").to_string();
-            Ok(Self::S3 { bucket, prefix })
+            Ok(Self::R2 { bucket, prefix })
         } else {
             Ok(Self::Local(std::path::PathBuf::from(s)))
         }

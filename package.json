@@ -1,20 +1,23 @@
 {
   "name": "gnarmap",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "bun run --cwd apps/web dev",
     "build": "bun run --cwd apps/web build",
+    "start": "bun run --cwd apps/web start",
     "lint": "bun run --cwd apps/web lint",
     "typecheck": "bun run --cwd apps/web typecheck",
     "pipeline:build": "cd packages/pipeline && cargo build --release",
-    "pipeline:daily": "cd packages/pipeline && ./target/release/snodas-pipeline daily",
-    "pipeline:backfill": "cd packages/pipeline && ./target/release/snodas-pipeline backfill",
-    "pipeline:build-zarr": "cd packages/pipeline && ./target/release/snodas-pipeline build-zarr"
+    "pipeline:daily": "cd packages/pipeline && ./target/release/snodas-pipeline daily --output r2://gnarmap-historical/snodas",
+    "pipeline:backfill": "cd packages/pipeline && ./target/release/snodas-pipeline backfill --output r2://gnarmap-historical/snodas",
+    "pipeline:build-zarr": "cd packages/pipeline && ./target/release/snodas-pipeline build-zarr --cog-dir ./output --output ./zarr-output",
+    "pipeline:sync-zarr": "cd packages/pipeline && rclone sync ./zarr-output r2:gnarmap-historical/zarr --progress"
   },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.958.0",
-    "fflate": "^0.8.2",
-    "recharts": "^3.6.0"
+  "engines": {
+    "node": ">=20"
   }
 }
