@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import sharp from "sharp";
+import UPNG from "upng-js";
 import { getCOG, getTileBounds, readTileData, getSnowDepthColor } from "@/lib/cog";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+
+const createPNG = (rgba: Uint8Array, width: number, height: number): ArrayBuffer => {
+  return UPNG.encode([rgba.buffer as ArrayBuffer], width, height, 0);
+};
+
+const createEmptyPNG = (width: number, height: number): ArrayBuffer => {
+  const rgba = new Uint8Array(width * height * 4);
+  return UPNG.encode([rgba.buffer as ArrayBuffer], width, height, 0);
+};
 
 export const GET = async (
   request: NextRequest,
@@ -37,17 +46,7 @@ export const GET = async (
     const tileData = await readTileData(image, bounds, tileSize);
 
     if (!tileData) {
-      const emptyPng = await sharp({
-        create: {
-          width: tileSize,
-          height: tileSize,
-          channels: 4,
-          background: { r: 0, g: 0, b: 0, alpha: 0 },
-        },
-      })
-        .png()
-        .toBuffer();
-
+      const emptyPng = createEmptyPNG(tileSize, tileSize);
       return new NextResponse(new Uint8Array(emptyPng), {
         headers: {
           "Content-Type": "image/png",
@@ -58,45 +57,21 @@ export const GET = async (
 
     const { data, destX, destY, destWidth, destHeight } = tileData;
 
-    const dataRgba = new Uint8Array(destWidth * destHeight * 4);
-    for (let i = 0; i < data.length; i++) {
-      const [r, g, b, a] = getSnowDepthColor(data[i]);
-      dataRgba[i * 4] = r;
-      dataRgba[i * 4 + 1] = g;
-      dataRgba[i * 4 + 2] = b;
-      dataRgba[i * 4 + 3] = a;
+    const fullRgba = new Uint8Array(tileSize * tileSize * 4);
+
+    for (let row = 0; row < destHeight; row++) {
+      for (let col = 0; col < destWidth; col++) {
+        const srcIdx = row * destWidth + col;
+        const dstIdx = (destY + row) * tileSize + (destX + col);
+        const [r, g, b, a] = getSnowDepthColor(data[srcIdx]);
+        fullRgba[dstIdx * 4] = r;
+        fullRgba[dstIdx * 4 + 1] = g;
+        fullRgba[dstIdx * 4 + 2] = b;
+        fullRgba[dstIdx * 4 + 3] = a;
+      }
     }
 
-    const dataImage = sharp(Buffer.from(dataRgba), {
-      raw: {
-        width: destWidth,
-        height: destHeight,
-        channels: 4,
-      },
-    });
-
-    const png = await sharp({
-      create: {
-        width: tileSize,
-        height: tileSize,
-        channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-      },
-    })
-      .composite([
-        {
-          input: await dataImage.toBuffer(),
-          left: destX,
-          top: destY,
-          raw: {
-            width: destWidth,
-            height: destHeight,
-            channels: 4,
-          },
-        },
-      ])
-      .png()
-      .toBuffer();
+    const png = createPNG(fullRgba, tileSize, tileSize);
 
     return new NextResponse(new Uint8Array(png), {
       headers: {

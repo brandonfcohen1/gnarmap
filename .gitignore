@@ -42,3 +42,8 @@ Cargo.lock
 # pipeline local data
 packages/pipeline/output/
 packages/pipeline/zarr-output/
+
+# cloudflare
+.open-next/
+.wrangler/
+.dev.vars
