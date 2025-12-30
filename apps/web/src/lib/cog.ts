@@ -1,6 +1,6 @@
 import { fromUrl, Pool } from "geotiff";
 import type { GeoTIFF, GeoTIFFImage } from "geotiff";
-import { getPresignedUrl, PRESIGNED_URL_EXPIRY } from "./s3";
+import { getPresignedUrl, PRESIGNED_URL_EXPIRY } from "./r2";
 
 const tiffCache = new Map<string, { tiff: GeoTIFF; expiry: number }>();
 const pool = new Pool();

@@ -113,8 +113,6 @@ export default function Map() {
   const [cursor, setCursor] = useState("crosshair");
   const [basemap, setBasemap] = useState("positron");
   const [chartLocation, setChartLocation] = useState<{ lng: number; lat: number } | null>(null);
-  const [rasterLoading, setRasterLoading] = useState(true);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const [layers, setLayers] = useState({
     snowDepthRaster: true,
@@ -149,22 +147,18 @@ export default function Map() {
     };
     img.src = "/snowicon.png";
 
-    map.on("sourcedataloading", (e) => {
-      if (e.sourceId === "snow-depth-raster") {
-        setTimeout(() => setRasterLoading(true), 0);
+    const handleIdle = () => {
+      if (map.getSource("snow-depth-raster")) {
+        const globalLoader = document.getElementById("global-loader");
+        if (globalLoader) globalLoader.remove();
       }
-    });
+    };
 
-    map.on("idle", () => {
-      setTimeout(() => {
-        setRasterLoading(false);
-        if (map.getSource("snow-depth-raster")) {
-          setInitialLoadComplete(true);
-          const globalLoader = document.getElementById("global-loader");
-          if (globalLoader) globalLoader.remove();
-        }
-      }, 0);
-    });
+    map.on("idle", handleIdle);
+
+    return () => {
+      map.off("idle", handleIdle);
+    };
   }, []);
 
   const handleMapClick = useCallback(async (e: MapLayerMouseEvent) => {

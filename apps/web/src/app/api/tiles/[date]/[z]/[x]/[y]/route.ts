@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 import { getCOG, getTileBounds, readTileData, getSnowDepthColor } from "@/lib/cog";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ date: string; z: string; x: string; y: string }> }
 ) {
+  const ip = getClientIp(request);
+  const { allowed } = checkRateLimit(ip);
+
+  if (!allowed) {
+    return new NextResponse("Too many requests", {
+      status: 429,
+      headers: { "X-RateLimit-Remaining": "0", "Retry-After": "60" },
+    });
+  }
+
   const { date, z, x, y: yWithExt } = await params;
   const yClean = yWithExt.replace(/\.png$/, "");
 
@@ -93,8 +104,7 @@ export async function GET(
         "Cache-Control": "public, max-age=86400",
       },
     });
-  } catch (error) {
-    console.error("Error generating tile:", date, z, x, yClean, error);
-    return new NextResponse(`Error generating tile: ${error instanceof Error ? error.message : String(error)}`, { status: 500 });
+  } catch {
+    return new NextResponse("Error generating tile", { status: 500 });
   }
 }

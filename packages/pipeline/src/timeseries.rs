@@ -129,10 +129,6 @@ impl TimeSeriesExtractor {
         Ok(date_count)
     }
 
-    pub fn get_existing_dates(&self) -> &HashSet<String> {
-        &self.existing_dates
-    }
-
     fn generate_grid(resolution: f64) -> Vec<GridPoint> {
         let bbox = BBOX_POST_2013;
         let mut points = Vec::new();

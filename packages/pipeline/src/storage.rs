@@ -60,14 +60,6 @@ impl S3Uploader {
         Ok(url)
     }
 
-    pub async fn upload_batch(&self, files: &[(impl AsRef<Path>, &str)]) -> Result<Vec<String>> {
-        let mut urls = Vec::new();
-        for (local_path, key_suffix) in files {
-            let url = self.upload_file(local_path.as_ref(), key_suffix).await?;
-            urls.push(url);
-        }
-        Ok(urls)
-    }
 }
 
 pub enum OutputDestination {

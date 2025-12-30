@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCOG, getValueAtPoint } from "@/lib/cog";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
+  const ip = getClientIp(request);
+  const { allowed } = checkRateLimit(ip);
+
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, {
+      status: 429,
+      headers: { "Retry-After": "60" },
+    });
+  }
+
   const { searchParams } = new URL(request.url);
   const lng = parseFloat(searchParams.get("lng") || "");
   const lat = parseFloat(searchParams.get("lat") || "");
@@ -29,8 +40,7 @@ export async function GET(request: NextRequest) {
       snowDepth: value,
       snowDepthInches: snowDepthInches.toFixed(1),
     });
-  } catch (error) {
-    console.error("Error identifying point:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to identify point" },
       { status: 500 }

@@ -72,10 +72,6 @@ impl ProductId {
         }
     }
 
-    pub fn code(&self) -> u32 {
-        *self as u32
-    }
-
     pub fn name(&self) -> &'static str {
         match self {
             Self::Swe => "swe",
@@ -88,17 +84,6 @@ impl ProductId {
         }
     }
 
-    pub fn scale_factor(&self) -> f64 {
-        match self {
-            Self::Swe => 1.0,
-            Self::SnowDepth => 1.0,
-            Self::SnowMeltRunoff => 100_000.0,
-            Self::Sublimation => 100_000.0,
-            Self::SublimationBlowing => 100_000.0,
-            Self::Precipitation => 10.0,
-            Self::SnowpackAverageTemp => 1.0,
-        }
-    }
 }
 
 impl fmt::Display for ProductId {
@@ -129,9 +114,6 @@ pub fn build_nsidc_url(date: NaiveDate) -> String {
 pub struct SnodasFile {
     pub date: NaiveDate,
     pub product_id: ProductId,
-    pub filename: String,
-    pub is_model: bool,
-    pub hour: u8,
 }
 
 impl SnodasFile {
@@ -166,32 +148,22 @@ impl SnodasFile {
 
         let product_id = ProductId::from_code(product_code)?;
 
-        let is_model = product_part.contains("Sl");
-
-        let full_str = base;
-        let ttnats_pos = full_str.find("TTNATS")?;
+        let ttnats_pos = base.find("TTNATS")?;
         let date_start = ttnats_pos + 6;
 
-        if date_start + 10 > full_str.len() {
+        if date_start + 10 > base.len() {
             return None;
         }
 
-        let date_part = &full_str[date_start..date_start + 10];
+        let date_part = &base[date_start..date_start + 10];
 
         let year: i32 = date_part[0..4].parse().ok()?;
         let month: u32 = date_part[4..6].parse().ok()?;
         let day: u32 = date_part[6..8].parse().ok()?;
-        let hour: u8 = date_part[8..10].parse().ok()?;
 
         let date = NaiveDate::from_ymd_opt(year, month, day)?;
 
-        Some(Self {
-            date,
-            product_id,
-            filename: filename.to_string(),
-            is_model,
-            hour,
-        })
+        Some(Self { date, product_id })
     }
 
     pub fn output_filename(&self) -> String {

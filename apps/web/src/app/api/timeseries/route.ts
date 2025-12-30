@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getS3Object } from "@/lib/s3";
+import { getR2Object, r2Client, BUCKET } from "@/lib/r2";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import * as fflate from "fflate";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 
-const BUCKET = "gnarmap-historical";
-
-const s3Client = new S3Client({
-  region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
+const CHUNK_SIZE = 256;
+const CHUNK_TIME_SIZE = 365;
+const MM_TO_INCHES = 25.4;
 
 interface ZarrMetadata {
   bounds: { west: number; east: number; north: number; south: number };
@@ -25,16 +19,18 @@ let cachedMetadata: ZarrMetadata | null = null;
 
 async function getDates(): Promise<string[]> {
   if (!cachedDates) {
-    const data = await getS3Object("zarr/dates.json");
-    cachedDates = JSON.parse(data!);
+    const data = await getR2Object("zarr/dates.json");
+    if (!data) throw new Error("Failed to fetch dates");
+    cachedDates = JSON.parse(data);
   }
   return cachedDates!;
 }
 
 async function getMetadata(): Promise<ZarrMetadata> {
   if (!cachedMetadata) {
-    const data = await getS3Object("zarr/snow_depth/zarr.json");
-    const zarrJson = JSON.parse(data!);
+    const data = await getR2Object("zarr/snow_depth/zarr.json");
+    if (!data) throw new Error("Failed to fetch metadata");
+    const zarrJson = JSON.parse(data);
     cachedMetadata = {
       bounds: zarrJson.attributes.bounds,
       units: zarrJson.attributes.units,
@@ -65,7 +61,7 @@ async function fetchChunk(tc: number, chunkY: number, chunkX: number): Promise<I
       Bucket: BUCKET,
       Key: `zarr/snow_depth/c/${tc}/${chunkY}/${chunkX}`,
     });
-    const response = await s3Client.send(command);
+    const response = await r2Client.send(command);
     const compressed = new Uint8Array(await response.Body!.transformToByteArray());
     const decompressed = fflate.gunzipSync(compressed);
     return new Int16Array(decompressed.buffer);
@@ -75,6 +71,16 @@ async function fetchChunk(tc: number, chunkY: number, chunkX: number): Promise<I
 }
 
 export async function GET(request: NextRequest) {
+  const ip = getClientIp(request);
+  const { allowed } = checkRateLimit(ip);
+
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, {
+      status: 429,
+      headers: { "Retry-After": "60" },
+    });
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const lng = parseFloat(searchParams.get("lng") || "");
   const lat = parseFloat(searchParams.get("lat") || "");
@@ -106,14 +112,13 @@ export async function GET(request: NextRequest) {
     else endIdx = endIdx - 1;
   }
 
-  const chunkTimeSize = 365;
-  const chunkY = Math.floor(pixel.y / 256);
-  const chunkX = Math.floor(pixel.x / 256);
-  const yOffset = pixel.y % 256;
-  const xOffset = pixel.x % 256;
+  const chunkY = Math.floor(pixel.y / CHUNK_SIZE);
+  const chunkX = Math.floor(pixel.x / CHUNK_SIZE);
+  const yOffset = pixel.y % CHUNK_SIZE;
+  const xOffset = pixel.x % CHUNK_SIZE;
 
-  const startChunk = Math.floor(startIdx / chunkTimeSize);
-  const endChunk = Math.floor(endIdx / chunkTimeSize);
+  const startChunk = Math.floor(startIdx / CHUNK_TIME_SIZE);
+  const endChunk = Math.floor(endIdx / CHUNK_TIME_SIZE);
 
   const chunkPromises = [];
   for (let tc = startChunk; tc <= endChunk; tc++) {
@@ -127,9 +132,9 @@ export async function GET(request: NextRequest) {
 
   for (let tc = startChunk; tc <= endChunk; tc++) {
     const data = chunkMap.get(tc);
-    const chunkStartT = tc * chunkTimeSize;
+    const chunkStartT = tc * CHUNK_TIME_SIZE;
     const localStart = Math.max(0, startIdx - chunkStartT);
-    const localEnd = Math.min(chunkTimeSize - 1, endIdx - chunkStartT);
+    const localEnd = Math.min(CHUNK_TIME_SIZE - 1, endIdx - chunkStartT);
 
     for (let t = localStart; t <= localEnd; t++) {
       const globalT = chunkStartT + t;
@@ -137,9 +142,9 @@ export async function GET(request: NextRequest) {
 
       let value = 0;
       if (data) {
-        const idx = t * 256 * 256 + yOffset * 256 + xOffset;
+        const idx = t * CHUNK_SIZE * CHUNK_SIZE + yOffset * CHUNK_SIZE + xOffset;
         const rawValue = data[idx];
-        value = rawValue > 0 ? rawValue / 25.4 : 0;
+        value = rawValue > 0 ? rawValue / MM_TO_INCHES : 0;
       }
 
       results.push({ date: allDates[globalT], value });

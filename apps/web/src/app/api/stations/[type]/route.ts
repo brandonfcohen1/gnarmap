@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getS3Object } from "@/lib/s3";
+import { getR2Object } from "@/lib/r2";
 
 const VALID_TYPES = ["snowdepth", "snowdensity", "snowfall"];
 
@@ -14,7 +14,7 @@ export async function GET(
   }
 
   try {
-    const body = await getS3Object(`geojson/${type}.json`);
+    const body = await getR2Object(`geojson/${type}.json`);
 
     return new NextResponse(body, {
       headers: {

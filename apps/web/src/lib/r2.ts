@@ -4,12 +4,20 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 export const BUCKET = "gnarmap-historical";
 export const PRESIGNED_URL_EXPIRY = 3600;
 
-export const s3Client = new S3Client({
+function getRequiredEnvVar(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
+export const r2Client = new S3Client({
   region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: `https://${getRequiredEnvVar("R2_ACCOUNT_ID")}.r2.cloudflarestorage.com`,
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    accessKeyId: getRequiredEnvVar("R2_ACCESS_KEY_ID"),
+    secretAccessKey: getRequiredEnvVar("R2_SECRET_ACCESS_KEY"),
   },
 });
 
@@ -23,14 +31,14 @@ export async function getPresignedUrl(key: string): Promise<string> {
     Bucket: BUCKET,
     Key: key,
   });
-  return getSignedUrl(s3Client, command, { expiresIn: PRESIGNED_URL_EXPIRY });
+  return getSignedUrl(r2Client, command, { expiresIn: PRESIGNED_URL_EXPIRY });
 }
 
-export async function getS3Object(key: string): Promise<string | undefined> {
+export async function getR2Object(key: string): Promise<string | undefined> {
   const command = new GetObjectCommand({
     Bucket: BUCKET,
     Key: key,
   });
-  const response = await s3Client.send(command);
+  const response = await r2Client.send(command);
   return response.Body?.transformToString();
 }

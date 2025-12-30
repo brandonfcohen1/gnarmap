@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { paginateListObjectsV2 } from "@aws-sdk/client-s3";
-import { s3Client, BUCKET } from "@/lib/s3";
+import { r2Client, BUCKET } from "@/lib/r2";
 
 const PREFIX = "snodas/";
 
@@ -16,7 +16,7 @@ async function fetchDates(): Promise<string[]> {
 
   const dates: string[] = [];
   const paginator = paginateListObjectsV2(
-    { client: s3Client },
+    { client: r2Client },
     { Bucket: BUCKET, Prefix: PREFIX }
   );
 
@@ -44,8 +44,7 @@ export async function GET() {
   try {
     const dates = await fetchDates();
     return NextResponse.json({ dates });
-  } catch (error) {
-    console.error("Error listing S3 objects:", error);
+  } catch {
     return NextResponse.json({ error: "Failed to list dates" }, { status: 500 });
   }
 }
