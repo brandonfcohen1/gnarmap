@@ -10,6 +10,7 @@
     "build": "bun run --cwd apps/web build",
     "start": "bun run --cwd apps/web start",
     "lint": "bun run --cwd apps/web lint",
+    "lint:python": "ruff check packages/pipeline/scripts/",
     "typecheck": "bun run --cwd apps/web typecheck",
     "pipeline:build": "cd packages/pipeline && cargo build --release",
     "pipeline:daily": "cd packages/pipeline && ./target/release/snodas-pipeline daily --output ./output",

@@ -39,6 +39,11 @@ jobs:
       - name: Install Python dependencies
         run: pip install rasterio rio-pmtiles numpy requests
 
+      - name: Install ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check packages/pipeline/scripts/"
+
       - name: Install rclone
         run: curl https://rclone.org/install.sh | sudo bash
 
