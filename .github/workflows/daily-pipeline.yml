@@ -37,7 +37,12 @@ jobs:
           sudo apt-get install -y gdal-bin libgdal-dev
 
       - name: Install Python dependencies
-        run: pip install rasterio rio-pmtiles numpy requests ruff
+        run: pip install rasterio rio-pmtiles numpy requests
+
+      - name: Install ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check packages/pipeline/scripts/"
 
       - name: Install rclone
         run: curl https://rclone.org/install.sh | sudo bash
@@ -56,9 +61,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install
-
-      - name: Lint
-        run: bun run lint
 
       - name: Build pipeline
         run: bun run pipeline:build
