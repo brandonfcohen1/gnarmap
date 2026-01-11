@@ -42,6 +42,7 @@ Cargo.lock
 # pipeline local data
 packages/pipeline/output/
 packages/pipeline/zarr-output/
+packages/pipeline/pmtiles-output/
 packages/pipeline/temp-cogs
 
 # cloudflare

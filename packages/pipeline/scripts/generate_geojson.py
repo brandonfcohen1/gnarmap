@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 import json
-import math
 import os
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 
@@ -15,9 +14,9 @@ def leading_zero(input):
 
 
 def fetch_geojson(data_type: str) -> dict:
-    today = datetime.today()
+    today = datetime.now(timezone.utc)
     datestring = f"{today.year}{leading_zero(today.month)}{leading_zero(today.day)}"
-    timestring = leading_zero(str(math.floor(datetime.utcnow().hour / 6) * 6))
+    timestring = leading_zero(str((today.hour // 6) * 6))
 
     geojson = {"type": "FeatureCollection", "features": []}
 
