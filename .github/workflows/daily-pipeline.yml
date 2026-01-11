@@ -37,7 +37,7 @@ jobs:
           sudo apt-get install -y gdal-bin libgdal-dev
 
       - name: Install Python dependencies
-        run: pip install rasterio rio-pmtiles numpy requests
+        run: pip install rasterio rio-pmtiles numpy requests ruff
 
       - name: Install rclone
         run: curl https://rclone.org/install.sh | sudo bash
