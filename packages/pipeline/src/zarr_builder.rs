@@ -1,10 +1,12 @@
 use anyhow::{Context, Result};
 use gdal::Dataset;
+use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 use zarrs::array::codec::GzipCodec;
 use zarrs::array::{Array, ArrayBuilder, DataType, FillValue};
 use zarrs::filesystem::FilesystemStore;
@@ -185,7 +187,7 @@ impl ZarrBuilder {
             .map(|(i, d)| (d.clone(), i))
             .collect();
 
-        let files_to_process: Vec<(PathBuf, String, usize)> = cog_files
+        let mut files_to_process: Vec<(PathBuf, String, usize)> = cog_files
             .into_iter()
             .filter_map(|path| {
                 let date = extract_date_from_cog_filename(
@@ -200,29 +202,53 @@ impl ZarrBuilder {
             })
             .collect();
 
-        let array_ref = &array;
-        let processed: Vec<Result<(String, usize)>> = files_to_process
-            .par_iter()
-            .map(|(path, date, time_idx)| {
-                let count = Self::process_single_cog(array_ref, path, *time_idx)?;
-                Ok((date.clone(), count))
-            })
-            .collect();
+        files_to_process.sort_by_key(|(_, _, idx)| *idx);
 
-        let mut total_nonzero = 0;
-        let mut success_count = 0;
-        for result in processed {
-            match result {
-                Ok((date, count)) => {
-                    total_nonzero += count;
-                    success_count += 1;
-                    debug!("Processed {} with {} non-zero chunks", date, count);
-                }
-                Err(e) => {
-                    warn!("Error processing COG: {}", e);
-                }
-            }
+        let mut time_chunk_groups: std::collections::BTreeMap<u64, Vec<(PathBuf, String, usize)>> =
+            std::collections::BTreeMap::new();
+        for item in files_to_process {
+            let time_chunk = item.2 as u64 / CHUNK_TIME;
+            time_chunk_groups.entry(time_chunk).or_default().push(item);
         }
+
+        let total_files: usize = time_chunk_groups.values().map(|v| v.len()).sum();
+        let total_chunks = time_chunk_groups.len();
+        info!("Processing {} files across {} time chunks", total_files, total_chunks);
+
+        let progress = ProgressBar::new(total_files as u64);
+        progress.set_style(
+            ProgressStyle::default_bar()
+                .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({percent}%) ETA: {eta}")
+                .unwrap()
+                .progress_chars("#>-"),
+        );
+
+        let array_ref = &array;
+        let success_count = AtomicUsize::new(0);
+        let total_nonzero = AtomicUsize::new(0);
+
+        for (chunk_idx, (time_chunk, files)) in time_chunk_groups.iter().enumerate() {
+            progress.set_message(format!("Time chunk {}/{}", chunk_idx + 1, total_chunks));
+
+            files
+                .par_iter()
+                .for_each(|(path, date, time_idx)| {
+                    match Self::process_single_cog(array_ref, path, *time_idx) {
+                        Ok(count) => {
+                            success_count.fetch_add(1, Ordering::Relaxed);
+                            total_nonzero.fetch_add(count, Ordering::Relaxed);
+                        }
+                        Err(e) => {
+                            warn!("Error processing {}: {}", date, e);
+                        }
+                    }
+                    progress.inc(1);
+                });
+        }
+
+        progress.finish_with_message("Done");
+        let success_count = success_count.load(Ordering::Relaxed);
+        let total_nonzero = total_nonzero.load(Ordering::Relaxed);
 
         self.dates = combined_dates;
         self.save_dates_metadata()?;

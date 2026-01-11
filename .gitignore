@@ -47,3 +47,6 @@ packages/pipeline/zarr-output/
 .open-next/
 .wrangler/
 .dev.vars
+
+# pmtiles
+*.pmtiles

@@ -12,10 +12,12 @@
     "lint": "bun run --cwd apps/web lint",
     "typecheck": "bun run --cwd apps/web typecheck",
     "pipeline:build": "cd packages/pipeline && cargo build --release",
-    "pipeline:daily": "cd packages/pipeline && ./target/release/snodas-pipeline daily --output r2://gnarmap-historical/snodas",
-    "pipeline:backfill": "cd packages/pipeline && ./target/release/snodas-pipeline backfill --output r2://gnarmap-historical/snodas",
+    "pipeline:daily": "cd packages/pipeline && ./target/release/snodas-pipeline daily --output ./output",
+    "pipeline:backfill": "cd packages/pipeline && ./target/release/snodas-pipeline backfill --output ./output",
     "pipeline:build-zarr": "cd packages/pipeline && ./target/release/snodas-pipeline build-zarr --cog-dir ./output --output ./zarr-output",
-    "pipeline:sync-zarr": "cd packages/pipeline && rclone sync ./zarr-output r2:gnarmap-historical/zarr --progress"
+    "pipeline:build-pmtiles": "cd packages/pipeline/scripts && python generate_pmtiles.py --batch ../output ../pmtiles-output",
+    "pipeline:sync-zarr": "cd packages/pipeline && rclone sync ./zarr-output r2:gnarmap-historical/zarr --progress",
+    "pipeline:sync-pmtiles": "cd packages/pipeline && rclone sync ./pmtiles-output r2:gnarmap-historical/pmtiles --progress"
   },
   "engines": {
     "node": ">=20"
