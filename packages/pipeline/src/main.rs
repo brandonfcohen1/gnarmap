@@ -10,7 +10,7 @@ use anyhow::{Context, Result};
 use chrono::NaiveDate;
 use clap::{Parser, Subcommand};
 use indicatif::{ProgressBar, ProgressStyle};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
@@ -78,7 +78,7 @@ enum Commands {
         #[arg(long, help = "Directory containing COG files")]
         cog_dir: String,
 
-        #[arg(long, default_value = "./zarr-output", help = "Output directory for Zarr store")]
+        #[arg(long, default_value = "./zarr-output", help = "Output directory for Zarr store (local path or r2://bucket/prefix)")]
         output: String,
 
         #[arg(long, help = "Append mode: add new dates to existing Zarr store")]
@@ -126,7 +126,7 @@ async fn main() -> Result<()> {
             output,
             append,
         } => {
-            run_build_zarr(&cog_dir, &output, append)?;
+            run_build_zarr(&cog_dir, &output, append).await?;
         }
     }
 
@@ -344,28 +344,172 @@ async fn run_extract_timeseries(
     Ok(())
 }
 
-fn run_build_zarr(cog_dir: &str, output: &str, append: bool) -> Result<()> {
+async fn run_build_zarr(cog_dir: &str, output: &str, append: bool) -> Result<()> {
     let cog_path = PathBuf::from(cog_dir);
-    let output_path = PathBuf::from(output);
+    let destination = OutputDestination::from_str(output)?;
 
     info!("Build Zarr: append={}", append);
 
-    let mut builder = if append && output_path.exists() {
-        info!("Loading existing Zarr store...");
-        let b = ZarrBuilder::load_existing(&output_path)?;
-        info!("Found {} existing dates", b.get_existing_dates().len());
-        b
-    } else {
-        ZarrBuilder::new(&output_path)?
-    };
+    match destination {
+        OutputDestination::Local(output_path) => {
+            let mut builder = if append && output_path.exists() {
+                info!("Loading existing Zarr store...");
+                let b = ZarrBuilder::load_existing(&output_path)?;
+                info!("Found {} existing dates", b.get_existing_dates().len());
+                b
+            } else {
+                ZarrBuilder::new(&output_path)?
+            };
 
-    let processed = builder.process_cogs(&cog_path, append)?;
+            let processed = builder.process_cogs(&cog_path, append)?;
 
-    info!(
-        "Complete: {} dates processed, {} total dates in store",
-        processed,
-        builder.dates_count()
-    );
+            info!(
+                "Complete: {} dates processed, {} total dates in store",
+                processed,
+                builder.dates_count()
+            );
+        }
+        OutputDestination::R2 { bucket, prefix } => {
+            let r2 = R2Uploader::new(bucket.clone(), prefix.clone()).await?;
+            let temp_dir = PathBuf::from("./temp_zarr");
+
+            if append {
+                info!("Fetching existing Zarr metadata from R2...");
+                match r2.download_bytes("dates.json").await {
+                    Ok(bytes) => {
+                        std::fs::create_dir_all(&temp_dir)?;
+                        std::fs::write(temp_dir.join("dates.json"), &bytes)?;
+
+                        let dates: Vec<String> = serde_json::from_slice(&bytes)?;
+                        info!("Found {} existing dates in R2", dates.len());
+
+                        let new_cog_dates = get_cog_dates(&cog_path)?;
+                        let existing_set: std::collections::BTreeSet<_> = dates.iter().collect();
+                        let new_dates: Vec<_> = new_cog_dates
+                            .iter()
+                            .filter(|d| !existing_set.contains(d))
+                            .collect();
+
+                        if new_dates.is_empty() {
+                            info!("No new dates to process");
+                            return Ok(());
+                        }
+
+                        info!("Will append {} new dates", new_dates.len());
+
+                        let affected_chunks = get_affected_time_chunks(&dates, &new_dates);
+                        info!("Downloading {} affected time chunks from R2...", affected_chunks.len());
+
+                        for chunk_idx in &affected_chunks {
+                            let chunk_prefix = format!("snow_depth/c/{}/", chunk_idx);
+                            let keys = r2.list_prefix(&chunk_prefix).await?;
+                            for key in keys {
+                                let local_path = temp_dir.join(&key);
+                                r2.download_file(&key, &local_path).await?;
+                            }
+                        }
+
+                        let zarr_meta_keys = ["zarr.json", "snow_depth/zarr.json"];
+                        for key in zarr_meta_keys {
+                            if let Ok(bytes) = r2.download_bytes(key).await {
+                                let local_path = temp_dir.join(key);
+                                if let Some(parent) = local_path.parent() {
+                                    std::fs::create_dir_all(parent)?;
+                                }
+                                std::fs::write(&local_path, &bytes)?;
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        info!("No existing Zarr found in R2, creating new store");
+                    }
+                }
+            }
+
+            let mut builder = if append && temp_dir.join("dates.json").exists() {
+                ZarrBuilder::load_existing(&temp_dir)?
+            } else {
+                std::fs::create_dir_all(&temp_dir)?;
+                ZarrBuilder::new(&temp_dir)?
+            };
+
+            let processed = builder.process_cogs(&cog_path, append)?;
+
+            info!("Uploading modified chunks to R2...");
+            upload_zarr_to_r2(&r2, &temp_dir).await?;
+
+            std::fs::remove_dir_all(&temp_dir).ok();
+
+            info!(
+                "Complete: {} dates processed, {} total dates in store",
+                processed,
+                builder.dates_count()
+            );
+        }
+    }
+
+    Ok(())
+}
+
+fn get_cog_dates(cog_dir: &Path) -> Result<Vec<String>> {
+    use crate::snodas::extract_date_from_cog_filename;
+
+    let mut dates = Vec::new();
+    for entry in std::fs::read_dir(cog_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().map(|e| e == "tif").unwrap_or(false) {
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if name.contains("snow_depth") {
+                    if let Some(date) = extract_date_from_cog_filename(name) {
+                        dates.push(date);
+                    }
+                }
+            }
+        }
+    }
+    dates.sort();
+    Ok(dates)
+}
+
+fn get_affected_time_chunks(existing_dates: &[String], new_dates: &[&String]) -> Vec<u64> {
+    const CHUNK_TIME: u64 = 365;
+
+    let mut all_dates: Vec<String> = existing_dates.to_vec();
+    for d in new_dates {
+        all_dates.push((*d).clone());
+    }
+    all_dates.sort();
+
+    let mut chunks = std::collections::BTreeSet::new();
+    for new_date in new_dates {
+        if let Some(idx) = all_dates.iter().position(|d| d == *new_date) {
+            chunks.insert(idx as u64 / CHUNK_TIME);
+        }
+    }
+
+    chunks.into_iter().collect()
+}
+
+async fn upload_zarr_to_r2(r2: &R2Uploader, local_dir: &Path) -> Result<()> {
+    use walkdir::WalkDir;
+
+    for entry in WalkDir::new(local_dir).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if path.is_file() {
+            let relative = path.strip_prefix(local_dir)?;
+            let key = relative.to_string_lossy().to_string();
+
+            let data = std::fs::read(path)?;
+            let content_type = if key.ends_with(".json") {
+                "application/json"
+            } else {
+                "application/octet-stream"
+            };
+
+            r2.upload_bytes(&key, data, content_type).await?;
+        }
+    }
 
     Ok(())
 }

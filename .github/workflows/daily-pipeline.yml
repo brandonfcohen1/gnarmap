@@ -1,0 +1,126 @@
+name: Daily Pipeline
+
+on:
+  schedule:
+    # Run at 10:00 UTC (5:00 AM EST) - SNODAS data typically available by then
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Specific date to process (YYYY-MM-DD), or leave empty for yesterday'
+        required: false
+
+env:
+  R2_BUCKET: gnarmap-historical
+  R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+  R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Install GDAL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin libgdal-dev
+
+      - name: Install Python dependencies
+        run: pip install rasterio rio-pmtiles numpy requests
+
+      - name: Install rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone for R2
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [r2]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          endpoint = https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          EOF
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build pipeline
+        run: bun run pipeline:build
+
+      - name: Determine date to process
+        id: dates
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            echo "date=${{ github.event.inputs.date }}" >> $GITHUB_OUTPUT
+          else
+            echo "date=$(date -d 'yesterday' +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run pipeline for date
+        run: |
+          DATE="${{ steps.dates.outputs.date }}"
+          echo "Processing date: $DATE"
+          bun run pipeline:daily -- --date $DATE
+
+      - name: Build Zarr (append to R2)
+        run: |
+          cd packages/pipeline
+          ./target/release/snodas-pipeline build-zarr --cog-dir ./output --output r2://$R2_BUCKET/zarr --append
+
+      - name: Generate PMTiles
+        run: |
+          mkdir -p packages/pipeline/pmtiles-output
+          cd packages/pipeline/scripts
+          python3 generate_pmtiles.py --batch ../output ../pmtiles-output --workers 2 --zoom-levels 4..8
+
+      - name: Sync PMTiles to R2
+        run: rclone copy packages/pipeline/pmtiles-output/ r2:$R2_BUCKET/pmtiles/ --progress
+
+      - name: Generate and sync station GeoJSON
+        run: |
+          cd packages/pipeline/scripts
+          R2_BUCKET=r2:$R2_BUCKET python3 generate_geojson.py
+
+      - name: Get pipeline summary
+        id: summary
+        run: |
+          cd packages/pipeline
+          ZARR_INFO=$(./target/release/snodas-pipeline build-zarr --cog-dir ./output --output r2://$R2_BUCKET/zarr --append 2>&1 | grep -E "Found|No new" | head -1)
+          ZARR_DATES=$(echo "$ZARR_INFO" | grep -oE '[0-9]+' | head -1 || echo "?")
+          PMTILES_COUNT=$(ls pmtiles-output/*.pmtiles 2>/dev/null | wc -l | tr -d ' ')
+          echo "zarr_dates=$ZARR_DATES" >> $GITHUB_OUTPUT
+          echo "pmtiles_count=$PMTILES_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "GnarMap Pipeline Complete - ${{ steps.dates.outputs.date }}"
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: GnarMap Pipeline <${{ secrets.EMAIL_USERNAME }}>
+          body: |
+            GnarMap daily pipeline completed successfully!
+
+            Date processed: ${{ steps.dates.outputs.date }}
+
+            Summary:
+            - Zarr dates: ${{ steps.summary.outputs.zarr_dates }}
+            - PMTiles generated: ${{ steps.summary.outputs.pmtiles_count }}
+
+            View the run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
