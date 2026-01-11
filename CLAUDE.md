@@ -33,17 +33,27 @@ gnarmap/
 ```bash
 cd packages/pipeline/scripts
 
-./backfill.sh status    # Show progress
+./backfill.sh status    # Show progress (local + R2 by default)
 ./backfill.sh cogs      # Download COGs (30-day chunks, skips existing)
 ./backfill.sh zarr      # Build Zarr (append mode)
 ./backfill.sh pmtiles   # Generate PMTiles (parallel, skips existing)
 ./backfill.sh sync      # Upload to R2
 ./backfill.sh all       # Run full pipeline
 
-# Customize with env vars
+# Environment variables
 START_DATE=2020-01-01 END_DATE=2023-12-31 ./backfill.sh cogs
-WORKERS=6 ./backfill.sh pmtiles
+WORKERS=8 ZOOM_LEVELS="4..8" ./backfill.sh pmtiles
+CHECK_R2=false ./backfill.sh status  # Skip R2 checks
 ```
+
+**Environment Variables:**
+- `START_DATE` - Start date (default: 2003-10-01)
+- `END_DATE` - End date (default: today)
+- `CHUNK_DAYS` - Days per COG download chunk (default: 30)
+- `WORKERS` - Parallel workers for PMTiles (default: CPU count)
+- `ZOOM_LEVELS` - PMTiles zoom range (default: 4..8)
+- `CHECK_R2` - Check R2 for status (default: true)
+- `R2_BUCKET` - R2 bucket path (default: r2:gnarmap-historical)
 
 ## Deployment
 

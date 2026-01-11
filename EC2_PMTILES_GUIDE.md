@@ -5,8 +5,10 @@
 **Recommended:** `c6i.4xlarge` (16 vCPU, 32GB RAM)
 
 - **Spot pricing:** ~$0.30/hr (vs $1.36 on-demand)
-- **Estimated time:** 2-3 hours for PMTiles generation
-- **Estimated cost:** ~$1 total
+- **Estimated time:** 6-8 hours for ~8000 PMTiles at zoom 4..8
+- **Estimated cost:** ~$2-3 for spot instance
+
+**WARNING:** Spot instances can be terminated by AWS at any time. Sync to R2 frequently to avoid losing work.
 
 **AMI:** Ubuntu 22.04 (recommended) or Amazon Linux 2023
 **Storage:** 100GB gp3
@@ -78,7 +80,7 @@ Since you already have COGs locally, copy them to EC2:
 
 ```bash
 # From your local machine (not EC2)
-scp -i "gnarmapec2.epm" -r ./packages/pipeline/output ec2-user@<ip>:~/gnarmap/packages/pipeline/
+scp -i "gnarmapec2.pem" -r ./packages/pipeline/output ec2-user@<ip>:~/gnarmap/packages/pipeline/
 ```
 
 Or upload to R2 first, then sync to EC2:
@@ -126,7 +128,7 @@ cd ~/gnarmap/packages/pipeline/scripts
 source ~/miniforge3/bin/activate
 
 # Run with nohup so it continues after disconnect
-nohup python generate_pmtiles.py --batch ../output ../pmtiles-output --workers 8 > ~/pmtiles.log 2>&1 &
+nohup python generate_pmtiles.py --batch ../output ../pmtiles-output --workers 8 --zoom-levels "4..8" > ~/pmtiles.log 2>&1 &
 ```
 
 ## 7. Monitor Progress
@@ -196,9 +198,11 @@ You may need to repeat this process in batches until all PMTiles are generated a
 | Task               | Time (c6i.4xlarge) |
 | ------------------ | ------------------ |
 | SCP COGs to EC2    | 30-60 min          |
-| PMTiles generation | 2-3 hours          |
+| PMTiles generation | 6-8 hours (zoom 4..8) |
 | R2 sync            | 30-60 min          |
-| **Total**          | **3-5 hours**      |
+| **Total**          | **7-10 hours**     |
+
+**Note:** Using zoom levels `4..8` instead of `4..10` dramatically improves speed (~10x faster) with minimal quality loss for 1km raster data. MapLibre can overzoom tiles at higher zoom levels.
 
 ## Alternative: Run Locally
 
