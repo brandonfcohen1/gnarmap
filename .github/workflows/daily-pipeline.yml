@@ -2,12 +2,12 @@ name: Daily Pipeline
 
 on:
   schedule:
-    # Run at 10:00 UTC (5:00 AM EST) - SNODAS data typically available by then
-    - cron: '0 10 * * *'
+    # Run at 10:00 AM Eastern (15:00 UTC, or 14:00 UTC during DST)
+    - cron: '0 15 * * *'
   workflow_dispatch:
     inputs:
       date:
-        description: 'Specific date to process (YYYY-MM-DD), or leave empty for yesterday'
+        description: 'Specific date to process (YYYY-MM-DD), or leave empty for today'
         required: false
 
 env:
@@ -71,7 +71,7 @@ jobs:
           if [ -n "${{ github.event.inputs.date }}" ]; then
             echo "date=${{ github.event.inputs.date }}" >> $GITHUB_OUTPUT
           else
-            echo "date=$(date -d 'yesterday' +%Y-%m-%d)" >> $GITHUB_OUTPUT
+            echo "date=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
           fi
 
       - name: Run pipeline for date
