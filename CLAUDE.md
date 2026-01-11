@@ -23,8 +23,8 @@ gnarmap/
 - **Daily run**: `bun run pipeline:daily` (generates COGs locally)
 - **Daily with date**: `bun run pipeline:daily -- --date 2024-12-27`
 - **Backfill**: `bun run pipeline:backfill -- --start 2024-12-27 --end 2024-12-30`
-- **Build Zarr**: `bun run pipeline:build-zarr` (COG → Zarr)
-- **Append Zarr**: `bun run pipeline:build-zarr -- --append`
+- **Build Zarr (local)**: `bun run pipeline:build-zarr` (COG → local Zarr)
+- **Append Zarr to R2**: `./target/release/snodas-pipeline build-zarr --cog-dir ./output --output r2://gnarmap-historical/zarr --append`
 - **Build PMTiles**: `bun run pipeline:build-pmtiles` (COG → PMTiles, parallel)
 - **Sync Zarr to R2**: `bun run pipeline:sync-zarr` (requires rclone)
 - **Sync PMTiles to R2**: `bun run pipeline:sync-pmtiles` (requires rclone)
@@ -83,6 +83,19 @@ In Cloudflare R2 bucket settings, add CORS policy:
 [{"AllowedOrigins": ["*"], "AllowedMethods": ["GET", "HEAD"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 86400}]
 ```
 
+### GitHub Actions (Daily Pipeline)
+Automated daily pipeline runs at 10:00 UTC via `.github/workflows/daily-pipeline.yml`.
+
+**Required Secrets** (Settings > Secrets and variables > Actions):
+- `R2_ACCOUNT_ID` - Cloudflare account ID
+- `R2_ACCESS_KEY_ID` - R2 API token access key
+- `R2_SECRET_ACCESS_KEY` - R2 API token secret
+- `EMAIL_USERNAME` - Gmail address for notifications
+- `EMAIL_PASSWORD` - Gmail app password
+- `NOTIFICATION_EMAIL` - Recipient email address
+
+**Manual trigger**: Actions > Daily Pipeline > Run workflow (optionally specify date)
+
 ### Environment Variables
 - `NEXT_PUBLIC_ZARR_URL` - Public R2 URL for Zarr data (e.g., `https://pub-xxx.r2.dev/zarr`)
 - `NEXT_PUBLIC_PMTILES_URL` - Public R2 URL for PMTiles (e.g., `https://pub-xxx.r2.dev/pmtiles`)
@@ -122,12 +135,14 @@ All data stored in `gnarmap-historical` R2 bucket:
 
 ### Python Scripts (`scripts/`)
 - `generate_pmtiles.py` - Convert COGs to PMTiles with color ramp (supports parallel processing)
+- `generate_geojson.py` - Fetch NOHRSC station data and generate GeoJSON
 - `backfill.sh` - Resumable backfill script for historical data
-- `requirements.txt` - Python dependencies (rio-pmtiles, rasterio, numpy)
+- `requirements.txt` - Python dependencies (rio-pmtiles, rasterio, numpy, requests)
 
 ### Key Features
+- **R2-native Zarr append**: Directly reads/writes to R2, only fetches affected time chunks (~25MB vs 500MB full download)
 - Sparse Zarr storage (skips zero-value chunks, ~80% size reduction)
-- Append mode for fast daily updates (~10-15s per day)
+- Append mode for fast daily updates (~2-3 min including R2 sync)
 - PMTiles for serverless tile serving
 - Parallel PMTiles generation (uses all CPU cores)
 - Resumable backfill (can stop/restart at any point)
