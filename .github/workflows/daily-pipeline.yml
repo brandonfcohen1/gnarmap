@@ -81,9 +81,16 @@ jobs:
           bun run pipeline:daily -- --date $DATE
 
       - name: Build Zarr (append to R2)
+        id: zarr
         run: |
           cd packages/pipeline
-          ./target/release/snodas-pipeline build-zarr --cog-dir ./output --output r2://$R2_BUCKET/zarr --append
+          OUTPUT=$(./target/release/snodas-pipeline build-zarr --cog-dir ./output --output r2://$R2_BUCKET/zarr --append 2>&1)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "No new dates"; then
+            echo "status=already up to date" >> $GITHUB_OUTPUT
+          else
+            echo "status=updated" >> $GITHUB_OUTPUT
+          fi
 
       - name: Generate PMTiles
         run: |
@@ -92,22 +99,20 @@ jobs:
           python3 generate_pmtiles.py --batch ../output ../pmtiles-output --workers 2 --zoom-levels 4..8
 
       - name: Sync PMTiles to R2
-        run: rclone copy packages/pipeline/pmtiles-output/ r2:$R2_BUCKET/pmtiles/ --progress
+        id: pmtiles_sync
+        run: |
+          OUTPUT=$(rclone copy packages/pipeline/pmtiles-output/ r2:$R2_BUCKET/pmtiles/ --progress 2>&1)
+          echo "$OUTPUT"
+          TRANSFERRED=$(echo "$OUTPUT" | grep -oE 'Transferred:[[:space:]]+[0-9]+' | grep -oE '[0-9]+' | tail -1 || echo "0")
+          echo "uploaded=$TRANSFERRED" >> $GITHUB_OUTPUT
 
       - name: Generate and sync station GeoJSON
         run: |
           cd packages/pipeline/scripts
           R2_BUCKET=r2:$R2_BUCKET python3 generate_geojson.py
 
-      - name: Get pipeline summary
-        id: summary
-        run: |
-          cd packages/pipeline
-          ZARR_INFO=$(./target/release/snodas-pipeline build-zarr --cog-dir ./output --output r2://$R2_BUCKET/zarr --append 2>&1 | grep -E "Found|No new" | head -1)
-          ZARR_DATES=$(echo "$ZARR_INFO" | grep -oE '[0-9]+' | head -1 || echo "?")
-          PMTILES_COUNT=$(ls pmtiles-output/*.pmtiles 2>/dev/null | wc -l | tr -d ' ')
-          echo "zarr_dates=$ZARR_DATES" >> $GITHUB_OUTPUT
-          echo "pmtiles_count=$PMTILES_COUNT" >> $GITHUB_OUTPUT
+      - name: Cleanup temporary COGs
+        run: rm -rf packages/pipeline/output packages/pipeline/pmtiles-output
 
       - name: Send email notification
         uses: dawidd6/action-send-mail@v3
@@ -124,8 +129,8 @@ jobs:
 
             Date processed: ${{ steps.dates.outputs.date }}
 
-            Summary:
-            - Zarr dates: ${{ steps.summary.outputs.zarr_dates }}
-            - PMTiles generated: ${{ steps.summary.outputs.pmtiles_count }}
+            R2 updates:
+            - Zarr time series: ${{ steps.zarr.outputs.status }}
+            - PMTiles: ${{ steps.pmtiles_sync.outputs.uploaded }} file(s) uploaded
 
             View the run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
