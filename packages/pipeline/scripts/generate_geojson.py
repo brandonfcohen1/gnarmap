@@ -35,27 +35,20 @@ def fetch_geojson(data_type: str) -> dict:
     for row in row_list:
         parts = row.split("|")
         try:
-            if data_type == "snowfall":
-                feature = {
-                    "type": "Feature",
-                    "geometry": {"type": "Point", "coordinates": [float(parts[1]), float(parts[0])]},
-                    "properties": {
-                        "name": parts[2],
-                        "elevation": parts[3],
-                        "value": parts[4],
-                        "duration": parts[6],
-                    },
-                }
-            else:
-                feature = {
-                    "type": "Feature",
-                    "geometry": {"type": "Point", "coordinates": [float(parts[1]), float(parts[0])]},
-                    "properties": {
-                        "name": parts[2],
-                        "elevation": parts[3],
-                        "value": parts[4],
-                    },
-                }
+            lat = float(parts[2])
+            lon = float(parts[3])
+            feature = {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [lon, lat]},
+                "properties": {
+                    "id": parts[0],
+                    "name": parts[1],
+                    "elevation": parts[4],
+                    "report_time_utc": parts[6],
+                    "amount": parts[7],
+                    "units": parts[8] if len(parts) > 8 else "",
+                },
+            }
             geojson["features"].append(feature)
         except (IndexError, ValueError):
             continue

@@ -127,6 +127,7 @@ const Map = () => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [basemap, setBasemap] = useState("positron");
   const [chartLocation, setChartLocation] = useState<{ lng: number; lat: number } | null>(null);
+  const [cursorStyle, setCursorStyle] = useState("crosshair");
 
   const [layers, setLayers] = useState({
     snowDepthRaster: true,
@@ -261,6 +262,14 @@ const Map = () => {
     ...(layers.stationsSnowfall ? ["clusters-snowfall", "unclustered-snowfall"] : []),
   ];
 
+  const handleMouseMove = useCallback((e: MapLayerMouseEvent) => {
+    if (e.features && e.features.length > 0) {
+      setCursorStyle("pointer");
+    } else {
+      setCursorStyle("crosshair");
+    }
+  }, []);
+
   return (
     <div className="relative h-full w-full">
       <MapGL
@@ -276,8 +285,9 @@ const Map = () => {
           osm: "https://tiles.openfreemap.org/styles/liberty",
         }[basemap]}
         onClick={handleMapClick}
+        onMouseMove={handleMouseMove}
         interactiveLayerIds={interactiveLayerIds}
-        cursor="crosshair"
+        cursor={cursorStyle}
         dragRotate={false}
         touchZoomRotate={false}
         minZoom={4}
@@ -376,13 +386,14 @@ const Map = () => {
             onClose={() => setStationPopup(null)}
             closeButton={true}
             closeOnClick={false}
+            maxWidth="320px"
           >
-            <div className="text-sm">
+            <div className="text-sm whitespace-nowrap">
               <p className="font-bold">{stationPopup.dataType}</p>
               <p><strong>Name:</strong> {stationPopup.name}</p>
               <p><strong>Elevation:</strong> {stationPopup.elevation}</p>
               <p><strong>Report Time (UTC):</strong> {stationPopup.reportTime}</p>
-              <p><strong>Amount:</strong> {stationPopup.amount} ({stationPopup.units})</p>
+              <p><strong>Amount:</strong> {parseFloat(stationPopup.amount).toFixed(2)} {stationPopup.units}</p>
               {stationPopup.duration && (
                 <p><strong>Duration:</strong> {stationPopup.duration} ({stationPopup.durationUnits})</p>
               )}
