@@ -249,7 +249,7 @@ const SnowChart = ({ lng, lat, onClose }: SnowChartProps) => {
           )}
           {!error && chartData.length > 0 && (
             <ResponsiveContainer width="100%" height={maximized ? "100%" : 320}>
-              <AreaChart data={chartData}>
+              <AreaChart data={chartData} style={{ cursor: "crosshair" }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                 <XAxis
                   dataKey="date"

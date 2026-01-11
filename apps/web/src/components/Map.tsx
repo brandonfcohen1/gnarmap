@@ -10,7 +10,10 @@ import MapGL, {
   MapRef,
 } from "react-map-gl/maplibre";
 import type { LayerProps } from "react-map-gl/maplibre";
+import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { Protocol } from "pmtiles";
+import { getSnowDepthAtPoint } from "@/lib/zarr";
 import Legend from "./Legend";
 import InfoModal from "./InfoModal";
 import LayerControls from "./LayerControls";
@@ -92,6 +95,9 @@ const unclusteredPointLayer = (id: string): LayerProps => ({
   },
 });
 
+const PMTILES_BASE_URL = process.env.NEXT_PUBLIC_PMTILES_URL || "https://pub-271adb240f434715904d54aa1aa3ddc8.r2.dev/pmtiles";
+const GEOJSON_BASE_URL = process.env.NEXT_PUBLIC_GEOJSON_URL || "https://pub-271adb240f434715904d54aa1aa3ddc8.r2.dev/geojson";
+
 const Map = () => {
   const mapRef = useRef<MapRef>(null);
   const [viewState, setViewState] = useState({
@@ -108,9 +114,17 @@ const Map = () => {
   const [stationPopup, setStationPopup] = useState<StationPopupData | null>(null);
   const [infoOpen, setInfoOpen] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    const protocol = new Protocol();
+    maplibregl.addProtocol("pmtiles", protocol.tile);
+    return () => {
+      maplibregl.removeProtocol("pmtiles");
+    };
+  }, []);
+
   const [isReady, setIsReady] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [cursor, setCursor] = useState("crosshair");
   const [basemap, setBasemap] = useState("positron");
   const [chartLocation, setChartLocation] = useState<{ lng: number; lat: number } | null>(null);
 
@@ -123,15 +137,18 @@ const Map = () => {
 
   useEffect(() => {
     if (!isReady) return;
-    fetch("/api/stations/snowdepth")
+    fetch(`${GEOJSON_BASE_URL}/snowdepth.json`)
       .then((res) => res.json())
-      .then(setSnowDepthData);
-    fetch("/api/stations/snowdensity")
+      .then(setSnowDepthData)
+      .catch(() => {});
+    fetch(`${GEOJSON_BASE_URL}/snowdensity.json`)
       .then((res) => res.json())
-      .then(setSnowDensityData);
-    fetch("/api/stations/snowfall")
+      .then(setSnowDensityData)
+      .catch(() => {});
+    fetch(`${GEOJSON_BASE_URL}/snowfall.json`)
       .then((res) => res.json())
-      .then(setSnowfallData);
+      .then(setSnowfallData)
+      .catch(() => {});
   }, [isReady]);
 
   const handleMapLoad = useCallback(() => {
@@ -147,17 +164,15 @@ const Map = () => {
     };
     img.src = "/snowicon.png";
 
-    const handleIdle = () => {
-      if (map.getSource("snow-depth-raster")) {
-        const globalLoader = document.getElementById("global-loader");
-        if (globalLoader) globalLoader.remove();
-      }
+    const removeLoader = () => {
+      const globalLoader = document.getElementById("global-loader");
+      if (globalLoader) globalLoader.remove();
     };
 
-    map.on("idle", handleIdle);
+    map.once("idle", removeLoader);
 
     return () => {
-      map.off("idle", handleIdle);
+      map.off("idle", removeLoader);
     };
   }, []);
 
@@ -224,12 +239,10 @@ const Map = () => {
 
     try {
       const { lng, lat } = e.lngLat;
-      const url = `/api/identify?lng=${lng}&lat=${lat}&date=${selectedDate}`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const snowDepthInches = await getSnowDepthAtPoint(lng, lat, selectedDate);
 
-      if (data.snowDepthInches !== null) {
-        setClickPopup({ lng, lat, snowDepth: `${data.snowDepthInches} in.` });
+      if (snowDepthInches !== null && snowDepthInches > 0) {
+        setClickPopup({ lng, lat, snowDepth: `${snowDepthInches.toFixed(1)} in.` });
       } else {
         setClickPopup({ lng, lat, snowDepth: "No Data" });
       }
@@ -238,8 +251,8 @@ const Map = () => {
     }
   }, [selectedDate]);
 
-  const rasterTileUrl = selectedDate
-    ? `/api/tiles/${selectedDate}/{z}/{x}/{y}.png`
+  const pmtilesUrl = selectedDate
+    ? `pmtiles://${PMTILES_BASE_URL}/${selectedDate}.pmtiles`
     : null;
 
   const interactiveLayerIds = [
@@ -255,8 +268,6 @@ const Map = () => {
         {...viewState}
         onMove={(evt) => setViewState(evt.viewState)}
         onLoad={handleMapLoad}
-        onMouseEnter={() => setCursor("pointer")}
-        onMouseLeave={() => setCursor("crosshair")}
         style={{ width: "100%", height: "100%" }}
         mapStyle={{
           positron: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
@@ -266,25 +277,24 @@ const Map = () => {
         }[basemap]}
         onClick={handleMapClick}
         interactiveLayerIds={interactiveLayerIds}
-        cursor={cursor}
+        cursor="crosshair"
         dragRotate={false}
         touchZoomRotate={false}
         minZoom={4}
       >
         <NavigationControl position="top-right" style={{ marginTop: "205px" }} />
 
-        {layers.snowDepthRaster && rasterTileUrl && (
+        {layers.snowDepthRaster && pmtilesUrl && (
           <Source
+            key={pmtilesUrl}
             id="snow-depth-raster"
             type="raster"
-            tiles={[rasterTileUrl]}
-            tileSize={256}
-            minzoom={3.5}
+            url={pmtilesUrl}
+            tileSize={512}
           >
             <Layer
               id="snow-depth-layer"
               type="raster"
-              minzoom={4}
               paint={{ "raster-opacity": 0.7 }}
             />
           </Source>
@@ -413,7 +423,7 @@ const Map = () => {
         </button>
       )}
       <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
-            {chartLocation && (
+      {chartLocation && (
         <SnowChart
           lng={chartLocation.lng}
           lat={chartLocation.lat}

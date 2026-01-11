@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { getAvailableDates } from "@/lib/zarr";
 
 interface DatePickerProps {
   selectedDate: string | null;
@@ -64,14 +65,14 @@ const DatePicker = ({ selectedDate, onDateChange, enabled = true, onReady }: Dat
     if (!enabled || hasFetched) return;
 
     setHasFetched(true);
-    fetch("/api/dates", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        const dateSet = new Set<string>(data.dates || []);
+    getAvailableDates()
+      .then((dates) => {
+        const dateSet = new Set<string>(dates);
         setAvailableDates(dateSet);
-        if (data.dates?.length > 0 && !selectedDate) {
-          onDateChange(data.dates[0]);
-          setViewDate(parseDate(data.dates[0]));
+        if (dates.length > 0 && !selectedDate) {
+          const latestDate = dates[dates.length - 1];
+          onDateChange(latestDate);
+          setViewDate(parseDate(latestDate));
         } else if (selectedDate) {
           setViewDate(parseDate(selectedDate));
         }
