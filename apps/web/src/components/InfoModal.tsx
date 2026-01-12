@@ -33,24 +33,30 @@ const InfoModal = ({ open, onClose }: InfoModalProps) => {
               Snow Depth map and underlying site observations. In their words:
             </p>
             <blockquote className="italic border-l-4 border-gray-300 pl-4">
-              The NOHRSC National Snow Analyses (NSA) provide daily comprehensive
-              snow information for the coterminous United States. The NSA are
-              based on modeled snow pack characteristics that are updated each
-              day using all operationally available ground, airborne, and
-              satellite observations of snow water equivalent, snow depth, and
-              snow cover.
+              The NOHRSC National Snow Analyses (NSA) provide daily
+              comprehensive snow information for the coterminous United States.
+              The NSA are based on modeled snow pack characteristics that are
+              updated each day using all operationally available ground,
+              airborne, and satellite observations of snow water equivalent,
+              snow depth, and snow cover.
             </blockquote>
             <p>
               The snow depths displayed here are <strong>modeled</strong> to 1km
-              resolution, so this map can&apos;t tell whether a particular line is in,
-              but can help answer generally what sort of snow coverage to expect.
-              This tool should not be used to evaluate avalanche or other safety
-              conditions.
+              resolution, so this map can&apos;t tell whether a particular line
+              is in, but can help answer generally what sort of snow coverage to
+              expect. This tool should not be used to evaluate avalanche or
+              other safety conditions.
             </p>
             <p>
               In addition to the snow depth color layer, you can load site
-              observation data for snow depth, snow coverage, and recent snowfall
-              for all of the sites which the NOHRSC uses to build this model.
+              observation data for snow depth, snow coverage, and recent
+              snowfall for all of the sites which the NOHRSC uses to build this
+              model.
+            </p>
+            <p>
+              You can also load historical data back to 2003 for the full map or
+              as a chart for a given point. Click on a point then{" "}
+              <i>View History</i> to load this.
             </p>
             <p>
               This project is{" "}
