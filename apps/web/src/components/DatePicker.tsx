@@ -176,7 +176,7 @@ const DatePicker = ({ selectedDate, onDateChange, enabled = true, onReady }: Dat
 
   if (loading) {
     return (
-      <div className="absolute top-4 left-16 z-10 bg-white rounded-md p-2 shadow-md">
+      <div className="absolute top-4 left-[140px] z-10 bg-white rounded-md p-2 shadow-md">
         <span className="text-sm text-gray-500">Loading...</span>
       </div>
     );
@@ -186,7 +186,7 @@ const DatePicker = ({ selectedDate, onDateChange, enabled = true, onReady }: Dat
   const yearsForView = getYearsForView();
 
   return (
-    <div ref={dropdownRef} className="absolute top-4 left-16 z-10">
+    <div ref={dropdownRef} className="absolute top-4 left-[140px] z-10">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="bg-white rounded-md px-3 py-2 shadow-md hover:bg-gray-100 flex items-center gap-2"

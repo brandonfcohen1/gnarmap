@@ -292,7 +292,7 @@ const Map = () => {
         touchZoomRotate={false}
         minZoom={4}
       >
-        <NavigationControl position="top-right" style={{ marginTop: "205px" }} />
+        <NavigationControl position="top-right" style={{ marginTop: "160px" }} />
 
         {layers.snowDepthRaster && pmtilesUrl && (
           <Source
@@ -414,16 +414,17 @@ const Map = () => {
       {isReady && (
         <button
           onClick={() => setInfoOpen(true)}
-          className="absolute top-4 left-4 z-10 bg-white rounded-md p-2 shadow-md hover:bg-gray-100"
-          aria-label="Info"
+          className="absolute top-4 left-4 z-10 bg-white rounded-md px-3 py-2 shadow-md hover:bg-gray-100 flex items-center gap-1.5"
+          aria-label="About Gnarmap"
         >
+          <span className="font-semibold text-sm text-gray-800">GnarMap</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={1.5}
             stroke="currentColor"
-            className="w-6 h-6"
+            className="w-4 h-4 text-gray-500"
           >
             <path
               strokeLinecap="round"

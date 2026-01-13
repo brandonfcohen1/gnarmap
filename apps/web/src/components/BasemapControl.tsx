@@ -18,7 +18,7 @@ const BasemapControl = ({ basemap, setBasemap }: BasemapControlProps) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="absolute top-[160px] right-[10px] z-10">
+    <div className="absolute bottom-[30px] right-[10px] z-10">
       {expanded ? (
         <div className="bg-white rounded-md shadow-md p-2">
           <div className="flex justify-between items-center mb-2">
