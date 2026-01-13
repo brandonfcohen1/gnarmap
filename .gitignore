@@ -52,3 +52,6 @@ packages/pipeline/temp-cogs
 
 # pmtiles
 *.pmtiles
+
+# claude
+CLAUDE.md

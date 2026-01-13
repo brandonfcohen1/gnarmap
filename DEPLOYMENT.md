@@ -1,3 +1,61 @@
+## Deployment
+
+### Web App (Cloudflare Pages)
+
+1. Connect repo to Cloudflare Pages
+2. Set build command: `bun run build`
+3. Set output directory: `apps/web/out`
+4. Add environment variables:
+   - `NEXT_PUBLIC_ZARR_URL` - R2 public URL for Zarr (e.g., `https://pub-xxx.r2.dev/zarr`)
+   - `NEXT_PUBLIC_PMTILES_URL` - R2 public URL for PMTiles (e.g., `https://pub-xxx.r2.dev/pmtiles`)
+   - `NEXT_PUBLIC_GEOJSON_URL` - R2 public URL for GeoJSON (e.g., `https://pub-xxx.r2.dev/geojson`)
+
+### R2 Storage Setup
+
+1. Create R2 bucket `gnarmap-historical` in Cloudflare dashboard
+2. Enable public access (Settings > Public access)
+3. Create API token with R2 read/write permissions
+4. Add CORS policy in bucket settings:
+
+```json
+[
+  {
+    "AllowedOrigins": ["*"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 86400
+  }
+]
+```
+
+### GitHub Actions (Daily Pipeline)
+
+The workflow at `.github/workflows/daily-pipeline.yml` runs daily at 10:00 UTC.
+
+**Required Secrets** (Settings > Secrets and variables > Actions):
+
+- `R2_ACCOUNT_ID` - Cloudflare account ID
+- `R2_ACCESS_KEY_ID` - R2 API token access key
+- `R2_SECRET_ACCESS_KEY` - R2 API token secret
+- `EMAIL_USERNAME` - Gmail address for notifications
+- `EMAIL_PASSWORD` - Gmail app password
+- `NOTIFICATION_EMAIL` - Recipient email address
+
+**Manual trigger**: Actions > Daily Pipeline > Run workflow (optionally specify date)
+
+### Local Development with rclone
+
+Create `~/.config/rclone/rclone.conf`:
+
+```ini
+[r2]
+type = s3
+provider = Cloudflare
+access_key_id = YOUR_ACCESS_KEY
+secret_access_key = YOUR_SECRET_KEY
+endpoint = https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com
+```
+
 # EC2 PMTiles Generation Guide
 
 ## 1. Launch EC2 Instance
@@ -101,11 +159,13 @@ mkdir -p ~/.config/rclone
 ```
 
 **Option A:** Copy config from local machine (run from local, not EC2):
+
 ```bash
 scp -i "gnarmapec2.pem" ~/.config/rclone/rclone.conf ec2-user@<instance-ip>:~/.config/rclone/
 ```
 
 **Option B:** Create config manually on EC2:
+
 ```bash
 cat > ~/.config/rclone/rclone.conf << 'EOF'
 [r2]
@@ -195,12 +255,12 @@ You may need to repeat this process in batches until all PMTiles are generated a
 
 ## Time Estimates
 
-| Task               | Time (c6i.4xlarge) |
-| ------------------ | ------------------ |
-| SCP COGs to EC2    | 30-60 min          |
+| Task               | Time (c6i.4xlarge)    |
+| ------------------ | --------------------- |
+| SCP COGs to EC2    | 30-60 min             |
 | PMTiles generation | 6-8 hours (zoom 4..8) |
-| R2 sync            | 30-60 min          |
-| **Total**          | **7-10 hours**     |
+| R2 sync            | 30-60 min             |
+| **Total**          | **7-10 hours**        |
 
 **Note:** Using zoom levels `4..8` instead of `4..10` dramatically improves speed (~10x faster) with minimal quality loss for 1km raster data. MapLibre can overzoom tiles at higher zoom levels.
 
