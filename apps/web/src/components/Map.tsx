@@ -289,7 +289,7 @@ const Map = () => {
         interactiveLayerIds={interactiveLayerIds}
         cursor={cursorStyle}
         dragRotate={false}
-        touchZoomRotate={false}
+        touchPitch={false}
         minZoom={4}
       >
         <NavigationControl position="top-right" style={{ marginTop: "160px" }} />
