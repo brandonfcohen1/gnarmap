@@ -16,7 +16,7 @@ const RootLayout = ({
     <html lang="en">
       <head>
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-297294501"
+          src="https://www.googletagmanager.com/gtag/js?id=G-RV76T2889D"
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
@@ -27,7 +27,7 @@ const RootLayout = ({
             gtag('consent', 'default', {
               'analytics_storage': 'granted'
             });
-            gtag('config', 'G-297294501');
+            gtag('config', 'G-RV76T2889D');
           `}
         </Script>
       </head>
