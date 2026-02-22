@@ -81,7 +81,8 @@ const formatDateAxis = (dateStr: string): string => {
   return `${months[month - 1]} '${year}`;
 };
 
-const formatDateTooltip = (dateStr: string): string => {
+const formatDateTooltip = (label: React.ReactNode): string => {
+  const dateStr = String(label);
   const year = dateStr.slice(0, 4);
   const month = parseInt(dateStr.slice(4, 6));
   const day = parseInt(dateStr.slice(6, 8));
