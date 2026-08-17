@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import json
 import os
 import subprocess
@@ -69,7 +68,7 @@ def main():
             with open(output_path, "w") as f:
                 json.dump(geojson, f)
             print(f"Wrote {output_path}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one data type's failure shouldn't abort the others
             print(f"Error fetching {data_type}: {e}", file=sys.stderr)
 
     r2_bucket = os.environ.get("R2_BUCKET")

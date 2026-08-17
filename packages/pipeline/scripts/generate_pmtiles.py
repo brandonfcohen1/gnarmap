@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Generate PMTiles from SNODAS COG files.
 
@@ -12,17 +11,17 @@ Requirements:
 """
 
 import argparse
-import subprocess
-from pathlib import Path
-import tempfile
 import multiprocessing as mp
+import subprocess
+import tempfile
 from functools import partial
+from pathlib import Path
 
 
 def apply_color_ramp(input_path: Path, output_path: Path) -> None:
     """Apply snow depth color ramp to COG and save as RGB GeoTIFF."""
-    import rasterio
     import numpy as np
+    import rasterio
 
     with rasterio.open(input_path) as src:
         data = src.read(1)
@@ -108,11 +107,11 @@ def process_single_file(args: tuple, pmtiles_dir: Path, zoom_levels: str) -> str
     try:
         generate_pmtiles(cog_file, pmtiles_file, zoom_levels)
         return f"Done {date}"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - one file's failure shouldn't abort the batch
         return f"Error {date}: {e}"
 
 
-def batch_process(cog_dir: Path, pmtiles_dir: Path, zoom_levels: str = "4..10", workers: int = None) -> None:
+def batch_process(cog_dir: Path, pmtiles_dir: Path, zoom_levels: str = "4..10", workers: int | None = None) -> None:
     """Process all COG files in a directory using multiprocessing."""
     pmtiles_dir.mkdir(parents=True, exist_ok=True)
 
