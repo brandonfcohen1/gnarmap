@@ -75,10 +75,17 @@ jobs:
           fi
 
       - name: Run pipeline for date
+        id: run
         run: |
           DATE="${{ steps.dates.outputs.date }}"
           echo "Processing date: $DATE"
-          bun run pipeline:daily -- --date $DATE
+          if ! bun run pipeline:daily -- --date "$DATE"; then
+            echo "Data for $DATE not available yet, falling back to previous day"
+            DATE=$(date -d "$DATE -1 day" +%Y-%m-%d)
+            echo "Processing date: $DATE"
+            bun run pipeline:daily -- --date "$DATE"
+          fi
+          echo "date=$DATE" >> $GITHUB_OUTPUT
 
       - name: Build Zarr (append to R2)
         id: zarr
@@ -121,13 +128,13 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "GnarMap Pipeline Complete - ${{ steps.dates.outputs.date }}"
+          subject: "GnarMap Pipeline Complete - ${{ steps.run.outputs.date }}"
           to: ${{ secrets.NOTIFICATION_EMAIL }}
           from: GnarMap Pipeline <${{ secrets.EMAIL_USERNAME }}>
           body: |
             GnarMap daily pipeline completed successfully!
 
-            Date processed: ${{ steps.dates.outputs.date }}
+            Date processed: ${{ steps.run.outputs.date }}
 
             R2 updates:
             - Zarr time series: ${{ steps.zarr.outputs.status }}
