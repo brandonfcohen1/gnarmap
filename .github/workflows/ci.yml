@@ -27,3 +27,14 @@ jobs:
 
       - name: Build
         run: bun run build
+
+  lint-pipeline-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          version: "0.17.0"
+          args: "check packages/pipeline/scripts/"
