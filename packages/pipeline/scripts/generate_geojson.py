@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import requests
 
@@ -13,7 +13,7 @@ def leading_zero(input):
 
 
 def fetch_geojson(data_type: str) -> dict:
-    today = datetime.now(timezone.utc)
+    today = datetime.now(UTC)
     datestring = f"{today.year}{leading_zero(today.month)}{leading_zero(today.day)}"
     timestring = leading_zero(str((today.hour // 6) * 6))
 
